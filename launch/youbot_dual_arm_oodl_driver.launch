@@ -1,0 +1,42 @@
+<?xml version="1.0"?>
+
+<!--
+This launch file starts the ROS wrapper for the KUKA youBot API.
+
+If you receive an error message that contains "Excecute as root"
+then go to the bin folder and execute: sudo setcap cap_net_raw+ep
+or enable the USE_SETCAP flag in the cmake file and recompile again.
+-->
+
+<launch>
+
+	<!-- Set relevant parameters. -->
+	<param name="youBotHasBase" type="bool" value="true"/>
+	<param name="youBotHasArms" type="bool" value="true"/> 
+	<param name="youBotDriverCycleFrequencyInHz" type="double" value="50.0"/>
+	<param name="youBotConfigurationFilePath" type="string" value="$(find youbot_driver)/config"/>
+
+	<param name="trajectoryActionServerEnable" type="bool" value="true"/>
+	<param name="trajectoryPositionGain" type="double" value="5.0"/>
+	<param name="trajectoryVelocityGain" type="double" value="0.0"/>
+	
+	<!-- Default name values --> 
+	<param name="youBotBaseName" type="str" value="youbot-base"/>
+	<param name="youBotArmName1" type="str" value="youbot-manipulator"/>
+	<param name="youBotArmName2" type="str" value="youbot-manipulator2"/>
+
+	<!-- youbot driver -->
+	<node pkg="youbot_driver_ros_interface"  type="youbot_driver_ros_interface" name="youbot_driver" output="screen">
+		<remap from="base/joint_states" to="joint_states"/> 
+		<remap from="arm_1/joint_states" to="joint_states"/> 
+		<remap from="arm_2/joint_states" to="joint_states"/>
+	</node>
+
+	<!-- upoad URDF model to the parameter server -->  
+	<param name="robot_description" command="$(find xacro)/xacro.py '$(find youbot_description)/robots/youbot_dual_arm.urdf.xacro'"/>
+
+	<!-- start robot_state_publisher -->
+	<node pkg="robot_state_publisher" type="state_publisher" name="robot_base_state_publisher" output="screen">
+
+</launch>
+

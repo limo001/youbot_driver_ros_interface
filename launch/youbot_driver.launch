@@ -1,0 +1,171 @@
+<?xml version="1.0"?>
+
+<!--
+This launch file starts the ROS wrapper for the KUKA youBot API.
+
+If you receive an error message that contains "Excecute as root"
+then go to the bin folder and execute: sudo setcap cap_net_raw+ep
+or enable the USE_SETCAP flag in the cmake file and recompile again.
+-->
+
+<launch>
+
+	<!-- Set relevant parameters. -->
+	<param name="youBotHasBase" type="bool" value="false"/>
+	<param name="youBotHasArms" type="bool" value="true"/> 
+	<param name="youBotDriverCycleFrequencyInHz" type="double" value="300.0"/>
+	<param name="youBotConfigurationFilePath" type="string" value="$(find youbot_driver)/config"/>
+	<param name="trajectoryActionServerEnable" type="bool" value="true"/>
+	<param name="trajectoryPositionGain" type="double" value="5.0"/>
+	<param name="trajectoryVelocityGain" type="double" value="0.0"/>
+
+        <!-- Set PID_sec_pos -->
+        <param name="P_Sec_Pos_joint_5" type="int" value="401"/>
+        <param name="P_Sec_Pos_joint_4" type="int" value="401"/>
+        <param name="P_Sec_Pos_joint_3" type="int" value="401"/>
+        <param name="P_Sec_Pos_joint_2" type="int" value="401"/>
+        <param name="P_Sec_Pos_joint_1" type="int" value="401"/>
+   
+        <param name="I_Sec_Pos_joint_5" type="int" value="1"/>
+        <param name="I_Sec_Pos_joint_4" type="int" value="1"/>
+        <param name="I_Sec_Pos_joint_3" type="int" value="1"/>
+        <param name="I_Sec_Pos_joint_2" type="int" value="1"/>
+        <param name="I_Sec_Pos_joint_1" type="int" value="1"/>
+
+
+        <param name="D_Sec_Pos_joint_5" type="int" value="1"/>
+        <param name="D_Sec_Pos_joint_4" type="int" value="1"/>
+        <param name="D_Sec_Pos_joint_3" type="int" value="1"/>
+        <param name="D_Sec_Pos_joint_2" type="int" value="1"/>
+        <param name="D_Sec_Pos_joint_1" type="int" value="1"/>
+
+
+        <param name="IClip_Sec_Pos_joint_5" type="int" value="501"/>
+        <param name="IClip_Sec_Pos_joint_4" type="int" value="501"/>
+        <param name="IClip_Sec_Pos_joint_3" type="int" value="501"/>
+        <param name="IClip_Sec_Pos_joint_2" type="int" value="501"/>
+        <param name="IClip_Sec_Pos_joint_1" type="int" value="501"/>
+
+       <!-- Set PID_sec_speed -->
+        <param name="P_Sec_Speed_joint_5" type="int" value="501"/>
+        <param name="P_Sec_Speed_joint_4" type="int" value="501"/>
+        <param name="P_Sec_Speed_joint_3" type="int" value="501"/>
+        <param name="P_Sec_Speed_joint_2" type="int" value="501"/>
+        <param name="P_Sec_Speed_joint_1" type="int" value="501"/>
+
+        <param name="I_Sec_Speed_joint_5" type="int" value="201"/>
+        <param name="I_Sec_Speed_joint_4" type="int" value="201"/>
+        <param name="I_Sec_Speed_joint_3" type="int" value="201"/>
+        <param name="I_Sec_Speed_joint_2" type="int" value="201"/>
+        <param name="I_Sec_Speed_joint_1" type="int" value="201"/>
+
+        <param name="D_Sec_Speed_joint_5" type="int" value="1"/>
+        <param name="D_Sec_Speed_joint_4" type="int" value="1"/>
+        <param name="D_Sec_Speed_joint_3" type="int" value="1"/>
+        <param name="D_Sec_Speed_joint_2" type="int" value="1"/>
+        <param name="D_Sec_Speed_joint_1" type="int" value="1"/>
+
+
+       <param name="IClip_Sec_Speed_joint_5" type="int" value="101"/>
+        <param name="IClip_Sec_Speed_joint_4" type="int" value="101"/>
+        <param name="IClip_Sec_Speed_joint_3" type="int" value="101"/>
+        <param name="IClip_Sec_Speed_joint_2" type="int" value="101"/>
+        <param name="IClip_Sec_Speed_joint_1" type="int" value="101"/>
+
+         <!-- Set PID_current -->
+        <param name="P_Current_joint_5" type="int" value="121"/>
+        <param name="P_Current_joint_4" type="int" value="121"/>
+        <param name="P_Current_joint_3" type="int" value="121"/>
+        <param name="P_Current_joint_2" type="int" value="121"/>
+        <param name="P_Current_joint_1" type="int" value="121"/>
+
+        <param name="I_Current_joint_5" type="int" value="101"/>
+        <param name="I_Current_joint_4" type="int" value="101"/>
+        <param name="I_Current_joint_3" type="int" value="101"/>
+        <param name="I_Current_joint_2" type="int" value="101"/>
+        <param name="I_Current_joint_1" type="int" value="101"/>
+ 
+        <param name="D_Current_joint_5" type="int" value="1"/>
+        <param name="D_Current_joint_4" type="int" value="1"/>
+        <param name="D_Current_joint_3" type="int" value="1"/>
+        <param name="D_Current_joint_2" type="int" value="1"/>
+        <param name="D_Current_joint_1" type="int" value="1"/>
+
+
+        <param name="IClip_Current_joint_5" type="int" value="101"/>
+        <param name="IClip_Current_joint_4" type="int" value="101"/>
+        <param name="IClip_Current_joint_3" type="int" value="101"/>
+        <param name="IClip_Current_joint_2" type="int" value="101"/>
+        <param name="IClip_Current_joint_1" type="int" value="101"/>
+
+        <!-- Set PID_first_pos -->
+        <param name="P_First_Pos_joint_5" type="int" value="201"/>
+        <param name="P_First_Pos_joint_4" type="int" value="201"/>
+        <param name="P_First_Pos_joint_3" type="int" value="201"/>
+        <param name="P_First_Pos_joint_2" type="int" value="201"/>
+        <param name="P_First_Pos_joint_1" type="int" value="201"/>
+   
+        <param name="I_First_Pos_joint_5" type="int" value="1"/>
+        <param name="I_First_Pos_joint_4" type="int" value="1"/>
+        <param name="I_First_Pos_joint_3" type="int" value="1"/>
+        <param name="I_First_Pos_joint_2" type="int" value="1"/>
+        <param name="I_First_Pos_joint_1" type="int" value="1"/>
+
+
+        <param name="D_First_Pos_joint_5" type="int" value="1"/>
+        <param name="D_First_Pos_joint_4" type="int" value="1"/>
+        <param name="D_First_Pos_joint_3" type="int" value="1"/>
+        <param name="D_First_Pos_joint_2" type="int" value="1"/>
+        <param name="D_First_Pos_joint_1" type="int" value="1"/>
+
+        <param name="IClip_First_Pos_joint_5" type="int" value="501"/>
+        <param name="IClip_First_Pos_joint_4" type="int" value="501"/>
+        <param name="IClip_First_Pos_joint_3" type="int" value="501"/>
+        <param name="IClip_First_Pos_joint_2" type="int" value="501"/>
+        <param name="IClip_First_Pos_joint_1" type="int" value="501"/>
+
+        Set PID_first_speed 
+        <param name="P_First_Speed_joint_5" type="int" value="201"/>
+        <param name="P_First_Speed_joint_4" type="int" value="201"/>
+        <param name="P_First_Speed_joint_3" type="int" value="201"/>
+        <param name="P_First_Speed_joint_2" type="int" value="201"/>
+        <param name="P_First_Speed_joint_1" type="int" value="201"/>
+
+        <param name="I_First_Speed_joint_5" type="int" value="1"/>
+        <param name="I_First_Speed_joint_4" type="int" value="1"/>
+        <param name="I_First_Speed_joint_3" type="int" value="1"/>
+        <param name="I_First_Speed_joint_2" type="int" value="1"/>
+        <param name="I_First_Speed_joint_1" type="int" value="1"/>
+
+        <param name="D_First_Speed_joint_5" type="int" value="1"/>
+        <param name="D_First_Speed_joint_4" type="int" value="1"/>
+        <param name="D_First_Speed_joint_3" type="int" value="1"/>
+        <param name="D_First_Speed_joint_2" type="int" value="1"/>
+        <param name="D_First_Speed_joint_1" type="int" value="1"/>
+
+
+        <param name="IClip_First_Speed_joint_5" type="int" value="501"/>
+        <param name="IClip_First_Speed_joint_4" type="int" value="501"/>
+        <param name="IClip_First_Speed_joint_3" type="int" value="501"/>
+        <param name="IClip_First_Speed_joint_2" type="int" value="501"/>
+        <param name="IClip_First_Speed_joint_1" type="int" value="501"/> 
+
+	
+	<!-- Default name values --> 
+	<param name="youBotBaseName" type="str" value="youbot-base"/>
+	<param name="youBotArmName1" type="str" value="youbot-manipulator"/>
+	
+	<!-- youbot driver -->
+	<node pkg="youbot_driver_ros_interface" type="youbot_driver_ros_interface" name="youbot_driver" output="screen">
+		<remap from="base/joint_states" to="joint_states"/>
+		<remap from="arm_1/joint_states" to="joint_states"/> 
+	</node>
+
+	<!-- upoad URDF model to the parameter server -->  
+	<param name="robot_description" command="$(find xacro)/xacro.py '$(find youbot_description)/robots/youbot.urdf.xacro'"/>
+
+	<!-- start robot_state_publisher -->
+	<node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher" output="screen"/>
+  
+</launch>
+
