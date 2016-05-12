@@ -195,21 +195,21 @@ public:
 
    
     //
-    ros::Publisher armjoint1ParemterCommandPublisher;
+    ros::Publisher armjoint1ParameterCommandPublisher;
 
-    ros::Publisher armjoint2ParemterCommandPublisher;
+    ros::Publisher armjoint2ParameterCommandPublisher;
 
-    ros::Publisher armjoint3ParemterCommandPublisher;
+    ros::Publisher armjoint3ParameterCommandPublisher;
    
-    ros::Publisher armjoint4ParemterCommandPublisher;
+    ros::Publisher armjoint4ParameterCommandPublisher;
 
-    ros::Publisher armjoint5ParemterCommandPublisher;
+    ros::Publisher armjoint5ParameterCommandPublisher;
 
 
 
     ros::Publisher armPWMCommandPublisher;
 
-    ros::Publisher armCurrentCommandPublisher;
+    ros::Publisher armCurrentPublisher;
 
     /// Publishes JointState messages with angles for the arm.
     ros::Publisher armJointStatePublisher;
@@ -217,7 +217,8 @@ public:
     /// Service to switch the motor off by setting the PWM value to zero
     ros::ServiceServer switchOffMotorsService;
 
-    ros::ServiceServer killService;
+    ros::ServiceServer setParameterService;
+    ros::ServiceServer getParameterService;
 
     /// Service to switch the motor ON by setting the velocity to zero
     ros::ServiceServer switchONMotorsService;

@@ -96,20 +96,26 @@ int main(int argc, char **argv)
  
    //VirtualObjectROSPublisher = VirtualObjectNode.advertise<eu_nifti_env_msg_ros::ElementOfInterestMessage>("/eoi", 20, latchOn);
   
-     
-    // ros::spinOnce();
+    //youBot.updateParameter();
+     //youBot.publishPID();
+     //ros::spinOnce();
+
     /* coordination */
     ros::Rate rate(youBotDriverCycleFrequencyInHz); //Input and output at the same time... (in Hz)
     while (n.ok())
     {
         ros::spinOnce();
         youBot.computeOODLSensorReadings();
-        youBot.updateParameter();
+        //youBot.updateParameter();
+        //youBot.publishPID();
         youBot.publishOODLSensorReadings();
         youBot.publishArmAndBaseDiagnostics(2.0);    //publish only every 2 seconds
         ros::spinOnce();
         rate.sleep();
     }
+
+
+   
    // youBot.updateParameter();
 
     youBot.stop();

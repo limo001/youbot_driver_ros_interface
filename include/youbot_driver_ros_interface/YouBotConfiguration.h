@@ -164,9 +164,7 @@ public:
     const static unsigned int LEFT_FINGER_INDEX = 0;
     const static unsigned int RIGHT_FINGER_INDEX = 1;
 
-   ///////////////////////////////////////////////////////
-   ////////     Subscriber              //////////////////
-   //////////////////////////////////////////////////////
+
     ros::Subscriber armPWMCommandSubscriber;
 
     ros::Subscriber armCurrentCommandSubscriber;
@@ -188,13 +186,6 @@ public:
     ros::Subscriber gripperPositionCommandSubscriber;
 
 
-
-  ////////////////////////////////////////////////////
-  /////   Publisher                 //////////////////
-  ////////////////////////////////////////////////////
-
-   
-    //
     ros::Publisher armjoint1ParameterCommandPublisher;
 
     ros::Publisher armjoint2ParameterCommandPublisher;
@@ -209,7 +200,7 @@ public:
 
     ros::Publisher armPWMCommandPublisher;
 
-    ros::Publisher armCurrentCommandPublisher;
+    ros::Publisher armCurrentPublisher;
 
     /// Publishes JointState messages with angles for the arm.
     ros::Publisher armJointStatePublisher;
@@ -217,7 +208,8 @@ public:
     /// Service to switch the motor off by setting the PWM value to zero
     ros::ServiceServer switchOffMotorsService;
 
-    ros::ServiceServer killService;
+    ros::ServiceServer setParameterService;
+    ros::ServiceServer getParameterService;
 
     /// Service to switch the motor ON by setting the velocity to zero
     ros::ServiceServer switchONMotorsService;

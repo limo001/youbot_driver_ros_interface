@@ -66,6 +66,7 @@
 #include "brics_actuator/JointTorques.h"
 #include "youbot_driver_ros_interface/JointCurrents.h"
 #include "youbot_driver_ros_interface/JointPWMs.h"
+#include "brics_actuator/JointCurrents.h"
 
 /* OODL includes */
 #include "YouBotConfiguration.h"
@@ -74,7 +75,8 @@
 #include <youbot_driver/generic/PidController.hpp>
 #include <control_toolbox/pid.h>
 
-
+#include "ros/single_subscriber_publisher.h"
+#include "ros/subscriber_link.h"
 
 //#include <control_msgs/FollowJointTrajectoryAction.h>
 //#include <actionlib/server/simple_action_server.h>
@@ -143,10 +145,10 @@ public:
     void armCommandCallback(const trajectory_msgs::JointTrajectory& youbotArmCommand);
 
   
-    void armPWMsCommandCallback(const youbot_driver_ros_interface::JointPWMsConstPtr& youbotArmCommand, int armIndex);
+    void armPWMsCommandCallback(const brics_actuator::JointValueConstPtr& youbotArmCommand, int armIndex);
 
    
-   void armCurrentsCommandCallback(const youbot_driver_ros_interface::JointCurrentsConstPtr& youbotArmCommand, int armIndex);
+   void armCurrentsCommandCallback(const brics_actuator::JointPositionsConstPtr& youbotArmCommand, int armIndex);
 
 
 
@@ -201,9 +203,10 @@ public:
 
      */
 
-
+    void connectCallback(const ros::SingleSubscriberPublisher& pub); 
     void updateParameter();
     void publishOODLSensorReadings();
+    void publishPID();
     
     /**
     * @brief Publishes status of base and arm as diagnostic and dashboard messages continuously
@@ -216,10 +219,12 @@ public:
      * @brief Mapps OODL values to ROS messages
      */
     void computeOODLSensorReadings();
-
+    
     
 
     bool ParametersControlCallback(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response, int armIndex);
+
+    bool ParametersReadControlCallback(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response, int armIndex);
 
     bool switchOffBaseMotorsCallback(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response);
 
@@ -232,6 +237,8 @@ public:
     bool calibrateArmCallback(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response, int armIndex);
 
     bool reconnectCallback(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response);
+
+ 
 
     /* Configuration: */
 
@@ -260,7 +267,7 @@ private:
     std::string youBotOdometryChildFrameID;
     std::string youBotArmFrameID;
 
-
+    int numSubscribersConnected;
 
        //PID_Sec_Pos/Speed
       std::vector <youbot::PParameterSecondParametersPositionControl>  PParameterSecondParametersPositionControl_Parameter;
@@ -340,12 +347,8 @@ private:
       std::vector<youbot::IClippingParameterFirstParametersSpeedControl>  IClippingParameterFirstParametersSpeedControl_Parameter;
        std::vector<int> IClippingParameterFirstParametersSpeedControl_actual;
      
-
-   //////////////////////////////////////////////////////////////////////////////7
-    //std::vector <youbot::PidController>  pidController;
-    std::vector<int>   pid_actual;
-    std::vector<youbot::PidController>  pidController;
-
+    //std::vector<youbot::JointTrajectoryController> jointTrajectoryController;
+    
     /// The ROS node handle
     ros::NodeHandle node;
 
@@ -367,9 +370,10 @@ private:
 
     /// Vector of the published joint states of per arm with angles in [RAD]
     vector<sensor_msgs::JointState> armJointStateMessages;
-    //////////////////////////////////////////////////////////////////////////////////////
-    //vector<dynamic_reconfigure::Config> armConfigMessages;
-    vector<sensor_msgs::JointState> armConfigMessages;
+   
+    vector<dynamic_reconfigure::Config> armConfigMessages;
+   // vector<sensor_msgs::JointState> armConfigMessages;
+   vector<brics_actuator::JointPositions> armCurrentMessages;
 
     youbot_driver_ros_interface::JointCurrents  armJointCurrentMessages;
      

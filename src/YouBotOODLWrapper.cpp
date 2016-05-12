@@ -61,8 +61,8 @@ node(n)
 
     youBotChildFrameID = "base_link"; //holds true for both: base and arm
     armJointStateMessages.clear();
-///////////////////////////////////////////////////////////////////
-    armConfigMessages.clear();
+   // armConfigMessages.clear();
+    armCurrentMessages.clear();
 
     n.param("youBotDriverCycleFrequencyInHz", youBotDriverCycleFrequencyInHz, 200.0);
     //n.param("trajectoryActionServerEnable", trajectoryActionServerEnable, false);
@@ -74,6 +74,8 @@ node(n)
     diagnosticNameBase = "platform_Base";
     dashboardMessagePublisher = n.advertise<pr2_msgs::PowerBoardState>("/dashboard/platform_state", 1);
     diagnosticArrayPublisher = n.advertise<diagnostic_msgs::DiagnosticArray>("/diagnostics", 1);
+   // numSubscribersConnected = 0;
+    
 }
 
 YouBotOODLWrapper::~YouBotOODLWrapper()
@@ -170,7 +172,7 @@ void YouBotOODLWrapper::initializeArm(std::string armName, bool enableStandardGr
             youBotConfiguration.youBotArmConfigurations[armIndex].gripperFingerNames[YouBotArmConfiguration::RIGHT_FINGER_INDEX] = gripperBarName;
             ROS_INFO("Joint %i for gripper of arm %s has name: %s", 2, youBotConfiguration.youBotArmConfigurations[armIndex].armID.c_str(), gripperBarName.c_str());
 
-            youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->calibrateGripper();
+            // youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->calibrateGripper();
         }
     }
     catch (std::exception& e)
@@ -194,7 +196,7 @@ void YouBotOODLWrapper::initializeArm(std::string armName, bool enableStandardGr
 
      topicName.str("");
     topicName << youBotConfiguration.youBotArmConfigurations[armIndex].commandTopicName << "arm_controller/current_command"; // e.g. arm_1/arm_controller/positionCommand
-    youBotConfiguration.youBotArmConfigurations[armIndex].armCurrentCommandSubscriber = node.subscribe<youbot_driver_ros_interface::JointCurrents > (topicName.str(), 1000, boost::bind(&YouBotOODLWrapper::armCurrentsCommandCallback, this, _1, armIndex));
+    youBotConfiguration.youBotArmConfigurations[armIndex].armCurrentCommandSubscriber = node.subscribe<brics_actuator::JointPositions> (topicName.str(), 1000, boost::bind(&YouBotOODLWrapper::armCurrentsCommandCallback, this, _1, armIndex));
 
 
     topicName.str("");
@@ -222,9 +224,13 @@ void YouBotOODLWrapper::initializeArm(std::string armName, bool enableStandardGr
     topicName << youBotConfiguration.youBotArmConfigurations[armIndex].commandTopicName << "joint_states";
     youBotConfiguration.youBotArmConfigurations[armIndex].armJointStatePublisher = node.advertise<sensor_msgs::JointState > (topicName.str(), 1); //TODO different names or one topic?
 
-    topicName.str("");
+    /*topicName.str("");
     topicName <<youBotConfiguration.youBotArmConfigurations[armIndex].commandTopicName << "arm_controller/gains/arm_joint_1/parameter_updates";
-    youBotConfiguration.youBotArmConfigurations[armIndex].armjoint1ParameterCommandPublisher = node.advertise<sensor_msgs::JointState> (topicName.str(), 1);
+    youBotConfiguration.youBotArmConfigurations[armIndex].armjoint1ParameterCommandPublisher = node.advertise<dynamic_reconfigure::Config> (topicName.str(), 1);*/
+
+    topicName.str("");
+    topicName <<youBotConfiguration.youBotArmConfigurations[armIndex].commandTopicName << "arm_controller/current_command/updates";
+    youBotConfiguration.youBotArmConfigurations[armIndex].armCurrentPublisher = node.advertise<brics_actuator::JointPositions> (topicName.str(), 1);
 
    
     /*topicName.str("");
@@ -262,8 +268,13 @@ void YouBotOODLWrapper::initializeArm(std::string armName, bool enableStandardGr
 
 
     serviceName.str("");
-    serviceName << youBotConfiguration.youBotArmConfigurations[armIndex].commandTopicName << "setParam"; // e.g. "arm_1/switchOffMotors"
-    youBotConfiguration.youBotArmConfigurations[armIndex].killService = node.advertiseService<std_srvs::Empty::Request, std_srvs::Empty::Response > (serviceName.str(), boost::bind(&YouBotOODLWrapper::ParametersControlCallback, this, _1, _2, armIndex));
+    serviceName << youBotConfiguration.youBotArmConfigurations[armIndex].commandTopicName << "setPIDParam"; // e.g. "arm_1/switchOffMotors"
+    youBotConfiguration.youBotArmConfigurations[armIndex].setParameterService = node.advertiseService<std_srvs::Empty::Request, std_srvs::Empty::Response > (serviceName.str(), boost::bind(&YouBotOODLWrapper::ParametersControlCallback, this, _1, _2, armIndex));
+
+
+    serviceName.str("");
+    serviceName << youBotConfiguration.youBotArmConfigurations[armIndex].commandTopicName << "getPIDParam"; // e.g. "arm_1/switchOffMotors"
+    youBotConfiguration.youBotArmConfigurations[armIndex].getParameterService = node.advertiseService<std_srvs::Empty::Request, std_srvs::Empty::Response > (serviceName.str(), boost::bind(&YouBotOODLWrapper::ParametersReadControlCallback, this, _1, _2, armIndex));
 
 
 
@@ -297,11 +308,14 @@ void YouBotOODLWrapper::initializeArm(std::string armName, bool enableStandardGr
     /* initialize message vector for arm joint states */
     sensor_msgs::JointState dummyMessage;
     armJointStateMessages.push_back(dummyMessage);
-   //////////////////////////////////////////////////////////////////////////////////////////////
-    sensor_msgs::JointState dummyConfigMessage;
+  
+    dynamic_reconfigure::Config  dummyConfigMessage;
     armConfigMessages.push_back(dummyConfigMessage);
 
-    /* setup frame_ids */
+    brics_actuator::JointPositions  dummyCurrentMessage;
+    armCurrentMessages.push_back(dummyCurrentMessage);
+
+     /* setup frame_ids */
     youBotArmFrameID = "arm"; //TODO find default topic name
     ROS_INFO("Arm \"%s\" is initialized.", armName.c_str());
     ROS_INFO("System has %i initialized arm(s).", static_cast<int> (youBotConfiguration.youBotArmConfigurations.size()));
@@ -356,9 +370,10 @@ void YouBotOODLWrapper::stop()
             delete youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm;
             youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm = 0;
         }
-         //////////////////////////////////////////////////////////
+        
         youBotConfiguration.youBotArmConfigurations[armIndex].armjoint1ParameterCommandPublisher.shutdown();
         youBotConfiguration.youBotArmConfigurations[armIndex].armJointStatePublisher.shutdown();
+        youBotConfiguration.youBotArmConfigurations[armIndex].armCurrentPublisher.shutdown();
         youBotConfiguration.youBotArmConfigurations[armIndex].armPositionCommandSubscriber.shutdown();
         youBotConfiguration.youBotArmConfigurations[armIndex].armVelocityCommandSubscriber.shutdown();
         youBotConfiguration.youBotArmConfigurations[armIndex].armTorquesCommandSubscriber.shutdown();
@@ -366,14 +381,19 @@ void YouBotOODLWrapper::stop()
         youBotConfiguration.youBotArmConfigurations[armIndex].gripperPositionCommandSubscriber.shutdown();
         youBotConfiguration.youBotArmConfigurations[armIndex].switchONMotorsService.shutdown();
         youBotConfiguration.youBotArmConfigurations[armIndex].switchOffMotorsService.shutdown();
+        youBotConfiguration.youBotArmConfigurations[armIndex].setParameterService.shutdown();
+        youBotConfiguration.youBotArmConfigurations[armIndex].getParameterService.shutdown();
+        
+        //numSubscribersConnected = 0;
     }
 
     youBotConfiguration.hasArms = false;
     areArmMotorsSwitchedOn = false;
     youBotConfiguration.youBotArmConfigurations.clear();
     armJointStateMessages.clear();
-//////////////////////////////////////////////////////////////////////////
+
     armConfigMessages.clear();
+    armCurrentMessages.clear();
 
 
     youbot::EthercatMaster::destroy();
@@ -426,94 +446,6 @@ void YouBotOODLWrapper::baseCommandCallback(const geometry_msgs::Twist& youbotBa
         ROS_ERROR("No base initialized!");
     }
 }
-
-
-
-/////////////////////////////////////////////////////////////////
-/////////////          armCurrentsCommandCallback    ///////////
-///////////////////////////////////////////////////////////////
-
-
-void YouBotOODLWrapper::armCurrentsCommandCallback(const youbot_driver_ros_interface::JointCurrentsConstPtr& youbotArmCommand, int armIndex)
-{
-    ROS_DEBUG("Command for arm%i received", armIndex + 1);
-    ROS_ASSERT(0 <= armIndex && armIndex < static_cast<int> (youBotConfiguration.youBotArmConfigurations.size()));
-
-    if (youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm != 0) // in case stop has been invoked
-    {
-
-        ROS_DEBUG("Arm ID is: %s", youBotConfiguration.youBotArmConfigurations[armIndex].armID.c_str());
-        if (youbotArmCommand->currents.size() < 1)
-        {
-            ROS_WARN("youBot driver received an invalid joint positions command.");
-            return;
-        }
-
-        youbot::JointCurrentSetpoint jointCurrent;
-        string unit = boost::units::to_string(boost::units::si::ampere);
-
-        /* populate mapping between joint names and values  */
-        std::map<string, double> jointNameToValueMapping;
-        for (int i = 0; i < static_cast<int> (youbotArmCommand->currents.size()); ++i)
-        {
-            if (unit == youbotArmCommand->currents[i].unit)
-            {
-                jointNameToValueMapping.insert(make_pair(youbotArmCommand->currents[i].joint_uri, youbotArmCommand->currents[i].value));
-            }
-            else
-            {
-                ROS_WARN("Unit incompatibility. Are you sure you want to command %s instead of %s ?", youbotArmCommand->currents[i].unit.c_str(), unit.c_str());
-            }
-        }
-
-        /* loop over all youBot arm joints and check if something is in the received message that requires action */
-        ROS_ASSERT(youBotConfiguration.youBotArmConfigurations[armIndex].jointNames.size() == static_cast<unsigned int> (youBotArmDoF));
-        youbot::EthercatMaster::getInstance().AutomaticSendOn(false); // ensure that all joint values will be send at the same time
-        for (int i = 0; i < youBotArmDoF; ++i)
-        {
-
-            /* check what is in map */
-            map<string, double>::const_iterator jointIterator = jointNameToValueMapping.find(youBotConfiguration.youBotArmConfigurations[armIndex].jointNames[i]);
-            if (jointIterator != jointNameToValueMapping.end())
-            {
-
-                /* set the desired joint value */
-                ROS_DEBUG("Trying to set joint %s to new position value %f", (youBotConfiguration.youBotArmConfigurations[armIndex].jointNames[i]).c_str(), jointIterator->second);
-                jointCurrent.current = jointIterator->second * ampere;
-                try
-                {
-                    youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i + 1).setData(jointCurrent); //youBot joints start with 1 not with 0 -> i + 1
-                }
-                catch (std::exception& e)
-                {
-                    std::string errorMessage = e.what();
-                    ROS_WARN("Cannot set arm joint %i: %s", i + 1, errorMessage.c_str());
-                }
-            }
-        }
-        youbot::EthercatMaster::getInstance().AutomaticSendOn(true); // ensure that all joint values will be send at the same time
-    }
-    else
-    {
-        ROS_ERROR("Arm%i is not correctly initialized!", armIndex + 1);
-    }
-
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 void YouBotOODLWrapper::armPositionsCommandCallback(const brics_actuator::JointPositionsConstPtr& youbotArmCommand, int armIndex)
 {
@@ -713,6 +645,71 @@ void YouBotOODLWrapper::armTorquesCommandCallback(const brics_actuator::JointTor
       }
 }
 
+void YouBotOODLWrapper::armCurrentsCommandCallback(const brics_actuator::JointPositionsConstPtr& youbotArmCommand, int armIndex)
+{
+    ROS_DEBUG("Command for arm%i received", armIndex + 1);
+    ROS_ASSERT(0 <= armIndex && armIndex < static_cast<int> (youBotConfiguration.youBotArmConfigurations.size()));
+
+    if (youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm != 0) // in case stop has been invoked
+    {
+
+        ROS_DEBUG("Arm ID is: %s", youBotConfiguration.youBotArmConfigurations[armIndex].armID.c_str());
+        if (youbotArmCommand->positions.size() < 1)
+        {
+            ROS_WARN("youBot driver received an invalid joint positions command.");
+            return;
+        }
+        youbot::JointCurrentSetpoint jointCurrent;
+        string unit = boost::units::to_string(boost::units::si::ampere);
+
+        /* populate mapping between joint names and values  */
+        std::map<string, double> jointNameToValueMapping;
+        for (int i = 0; i < static_cast<int> (youbotArmCommand->positions.size()); ++i)
+        {
+            if (unit == youbotArmCommand->positions[i].unit)
+            {
+                jointNameToValueMapping.insert(make_pair(youbotArmCommand->positions[i].joint_uri, youbotArmCommand->positions[i].value));
+            }
+            else
+            {
+                ROS_WARN("Unit incompatibility. Are you sure you want to command %s instead of %s ?", youbotArmCommand->positions[i].unit.c_str(), unit.c_str());
+            }
+        }
+
+        /* loop over all youBot arm joints and check if something is in the received message that requires action */
+       ROS_ASSERT(youBotConfiguration.youBotArmConfigurations[armIndex].jointNames.size() == static_cast<unsigned int> (youBotArmDoF));
+        youbot::EthercatMaster::getInstance().AutomaticSendOn(false); // ensure that all joint values will be send at the same time
+        for (int i = 0; i < youBotArmDoF; ++i)
+        {
+
+            /* check what is in map */
+            map<string, double>::const_iterator jointIterator = jointNameToValueMapping.find(youBotConfiguration.youBotArmConfigurations[armIndex].jointNames[i]);
+            if (jointIterator != jointNameToValueMapping.end())
+            {
+
+                /* set the desired joint value */
+                ROS_DEBUG("Trying to set joint %s to new position value %f", (youBotConfiguration.youBotArmConfigurations[armIndex].jointNames[i]).c_str(), jointIterator->second);
+                jointCurrent.current = jointIterator->second * ampere;
+                try
+                {
+                    youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i + 1).setData(jointCurrent); //youBot joints start with 1 not with 0 -> i + 1
+                }
+                catch (std::exception& e)
+                {
+                    std::string errorMessage = e.what();
+                    ROS_WARN("Cannot set arm joint %i: %s", i + 1, errorMessage.c_str());
+                }
+            }
+        }
+        youbot::EthercatMaster::getInstance().AutomaticSendOn(true); // ensure that all joint values will be send at the same time
+    }
+    else
+    {
+        ROS_ERROR("Arm%i is not correctly initialized!", armIndex + 1);
+    }
+
+}
+
 void YouBotOODLWrapper::armJointTrajectoryGoalCallback(actionlib::ActionServer<control_msgs::FollowJointTrajectoryAction>::GoalHandle youbotArmGoal, unsigned int armIndex) {
 	ROS_INFO("Goal for arm%i received", armIndex + 1);
 	ROS_ASSERT(armIndex < youBotConfiguration.youBotArmConfigurations.size());
@@ -903,14 +900,6 @@ void YouBotOODLWrapper::gripperPositionsCommandCallback(const brics_actuator::Jo
 	}
 }
 
-
-
-
-
-
-
-
-/////////////////////////////////////////////////////////////////////
 /*void YouBotOODLWrapper::armPWMsCommandCallback(const youbot_driver_ros_interface::JointPWMsConstPtr& youbotArmCommand, int armIndex)
 {
     ROS_DEBUG("Command for arm%i received", armIndex + 1);
@@ -978,104 +967,88 @@ void YouBotOODLWrapper::gripperPositionsCommandCallback(const brics_actuator::Jo
 }*/
 
 
-/////////////////////////////////////////////////////////////////////////
-
-void YouBotOODLWrapper::updateParameter()
+/*void YouBotOODLWrapper::updateParameter()
 {
-     try
-  {
-        currentTime = ros::Time::now();
-        youbot::EthercatMaster::getInstance().AutomaticReceiveOn(false);
 
+try{
+    
        if (youBotConfiguration.hasArms == true)
-    {
+       {
 
-       for (int armIndex = 0; armIndex < static_cast<int> (youBotConfiguration.youBotArmConfigurations.size()); armIndex++) 
+        for (int armIndex = 0; armIndex < static_cast<int> (youBotConfiguration.youBotArmConfigurations.size()); armIndex++)
         {
             ROS_ASSERT(youBotConfiguration.youBotArmConfigurations.size() == armConfigMessages.size());
             
-            //armConfigMessages[armIndex].bools.resize(1);
-            //armConfigMessages[armIndex].ints.resize(1);
-            //armConfigMessages[armIndex].strs.resize(1);
-            //armConfigMessages[armIndex].doubles.resize(1);
-            //armConfigMessages[armIndex].groups.resize(1);
-            armConfigMessages[armIndex].header.stamp = currentTime;
-            armConfigMessages[armIndex].name.resize(1);
-            armConfigMessages[armIndex].position.resize(youBotArmDoF);
-            //armConfigMessages[armIndex].velocity.resize(youBotArmDoF + youBotNumberOfFingers);
-           // armConfigMessages[armIndex].effort.resize(youBotArmDoF + youBotNumberOfFingers);
-            
-           if (youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm == 0)
+
+            /* fill joint state message */
+           /* PParameterSecondParametersPositionControl_actual.resize(youBotArmDoF);
+            IParameterSecondParametersPositionControl_actual.resize(youBotArmDoF);
+            DParameterSecondParametersPositionControl_actual.resize(youBotArmDoF);
+            IClippingParameterSecondParametersPositionControl_actual.resize(youBotArmDoF);
+
+            PParameterSecondParametersPositionControl_Parameter.resize(youBotArmDoF);
+            IParameterSecondParametersPositionControl_Parameter.resize(youBotArmDoF);
+            DParameterSecondParametersPositionControl_Parameter.resize(youBotArmDoF);
+            IClippingParameterSecondParametersPositionControl_Parameter.resize(youBotArmDoF);
+
+            armConfigMessages[armIndex].bools.resize(0);
+            armConfigMessages[armIndex].ints.resize(0);
+            armConfigMessages[armIndex].strs.resize(0);
+            armConfigMessages[armIndex].doubles.resize(2);
+            armConfigMessages[armIndex].groups.resize(0);
+
+     
+            ROS_ASSERT(youBotConfiguration.youBotArmConfigurations[armIndex].jointNames.size() == static_cast<unsigned int> (youBotArmDoF));
+            for (int i = 0; i < youBotArmDoF; ++i)
             {
-                ROS_ERROR("Arm%i is not correctly initialized! Cannot publish data.", armIndex + 1);
-                continue;
+                   youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).getConfigurationParameter(PParameterSecondParametersPositionControl_Parameter[i]);
+                   youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).getConfigurationParameter(IParameterSecondParametersPositionControl_Parameter[i]);
+                   youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).getConfigurationParameter(DParameterSecondParametersPositionControl_Parameter[i]);
+	           youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).getConfigurationParameter(IClippingParameterSecondParametersPositionControl_Parameter[i]);
+	
+                  PParameterSecondParametersPositionControl_Parameter[i].getParameter(PParameterSecondParametersPositionControl_actual[i]); 
+                  IParameterSecondParametersPositionControl_Parameter[i].getParameter(IParameterSecondParametersPositionControl_actual[i]); 
+                  DParameterSecondParametersPositionControl_Parameter[i].getParameter(DParameterSecondParametersPositionControl_actual[i]); 
+                  IClippingParameterSecondParametersPositionControl_Parameter[i].getParameter(IClippingParameterSecondParametersPositionControl_actual[i]);
+
+
             }
+
+                std::vector<dynamic_reconfigure::DoubleParameter>  doubles;
+                doubles.resize(2);
+                //doubles[0].name.resize(5);
+               // doubles[0].value.resize(5);
+               doubles[0].name = "p";
+                doubles[1].name = "i";
+                doubles[0].value = PParameterSecondParametersPositionControl_actual[0];
+                doubles[1].value = IParameterSecondParametersPositionControl_actual[0];
+
+                armConfigMessages[armIndex].doubles = doubles;
+
+            // check if trajectory controller is finished
+			bool areTrajectoryControllersDone = true;
+			for (int i = 0; i < youBotArmDoF; ++i) {
+				if (youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i + 1).trajectoryController.isTrajectoryControllerActive()) {
+					areTrajectoryControllersDone = false;
+					break;
+				}
+			}
            
-             armConfigMessages[armIndex].name[0] = "Joint_1"; //TODO no unique names for URDF yet
-
-
-            //std::vector<dynamic_reconfigure::DoubleParameter>  doubles;
-            //doubles.resize(5);
-
-           // doubles[0].name = "p";
-           // doubles[0].value = pidController[0].getGain(p);
-            //doubles[1].name = "i";
-           // doubles[1]
-            //doubles[2].name = "d";
-           // doubles[3].name = "i_clamp_min";
-           // doubles[4].name = "i_clamp_max";
-            double p;
-            double i;
-            double d;
-            double i1;
-            double i2;
- 
-    //std::vector<double> p;
- 
-    //std::vector<double> i;
-    //std::vector<double> d;
-    //std::vector<double> i1;
-    //std::vector<double> i2;
-
-       control_toolbox::Pid pid;
-        pid.initPid(6.0, 1.0, 2.0, 0.3, -0.3);
-        double position_desi_ = 0.5;
-        ...
-        ros::Time last_time = ros::Time::now();
-        while (true) {
-        ros::Time time = ros::Time::now();
-        double effort = pid.updatePid(currentPosition() - position_desi_, time - last_time);
-        last_time = time;
         }
-        
-	    pidController.resize(youBotArmDoF);
-            pidController[0].getGains(p, i, d,i1,i2);
+    }
 
-            armConfigMessages[armIndex].position[0] = 5.0;
-            armConfigMessages[armIndex].position[1] = i;
-            armConfigMessages[armIndex].position[2] = d;
-            armConfigMessages[armIndex].position[3] = i1;
-            armConfigMessages[armIndex].position[4] = i2;
-
-
-           // armConfigMessages[armIndex].doubles = doubles;
-
-           }
-     } 
-     youbot::EthercatMaster::getInstance().AutomaticReceiveOn(true); // ensure that all joint values will be received at the same time
+    youbot::EthercatMaster::getInstance().AutomaticReceiveOn(true); // ensure that all joint values will be received at the same time
   }catch (youbot::EtherCATConnectionException& e)
   {
       ROS_WARN("%s", e.what());
-      
       youBotConfiguration.hasArms = false;
   }
-     catch (std::exception& e)
+	catch (std::exception& e)
 	{
 		ROS_WARN_ONCE("%s", e.what());
-	}       
-               
-}
+	}
 
+}*/
 
 
 void YouBotOODLWrapper::computeOODLSensorReadings()
@@ -1086,7 +1059,11 @@ void YouBotOODLWrapper::computeOODLSensorReadings()
     youbot::JointSensedAngle currentAngle;
     youbot::JointSensedVelocity currentVelocity;
     youbot::JointSensedTorque currentTorque;
-////////////////////////////
+
+   // youbot::JointCurrentSetpoint currentJointCurrent;
+    //string unit = boost::units::to_string(boost::units::si::ampere);
+
+    youbot::JointSensedCurrent   currentJointCurrent;
     
 
     youbot::EthercatMaster::getInstance().AutomaticReceiveOn(false); // ensure that all joint values will be received at the same time
@@ -1200,6 +1177,7 @@ void YouBotOODLWrapper::computeOODLSensorReadings()
         for (int armIndex = 0; armIndex < static_cast<int> (youBotConfiguration.youBotArmConfigurations.size()); armIndex++)
         {
             ROS_ASSERT(youBotConfiguration.youBotArmConfigurations.size() == armJointStateMessages.size());
+            ROS_ASSERT(youBotConfiguration.youBotArmConfigurations.size() == armCurrentMessages.size());
 
             /* fill joint state message */
             armJointStateMessages[armIndex].header.stamp = currentTime;
@@ -1207,7 +1185,9 @@ void YouBotOODLWrapper::computeOODLSensorReadings()
             armJointStateMessages[armIndex].position.resize(youBotArmDoF + youBotNumberOfFingers);
             armJointStateMessages[armIndex].velocity.resize(youBotArmDoF + youBotNumberOfFingers);
             armJointStateMessages[armIndex].effort.resize(youBotArmDoF + youBotNumberOfFingers);
-
+         
+            //armCurrentMessages[armIndex].poisonStamp.resize(youBotArmDoF);
+            armCurrentMessages[armIndex].positions.resize(youBotArmDoF);
             
 
             ROS_ASSERT(youBotConfiguration.youBotArmConfigurations[armIndex].jointNames.size() == static_cast<unsigned int> (youBotArmDoF));
@@ -1217,11 +1197,20 @@ void YouBotOODLWrapper::computeOODLSensorReadings()
                 youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i + 1).getData(currentVelocity);
                 youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i + 1).getData(currentTorque);
 
+                youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i + 1).getData(currentJointCurrent); 
+              
+
                 armJointStateMessages[armIndex].name[i] = youBotConfiguration.youBotArmConfigurations[armIndex].jointNames[i]; //TODO no unique names for URDF yet
                 armJointStateMessages[armIndex].position[i] = currentAngle.angle.value();
                 armJointStateMessages[armIndex].velocity[i] = currentVelocity.angularVelocity.value();
                 armJointStateMessages[armIndex].effort[i] = currentTorque.torque.value();
+
+                armCurrentMessages[armIndex].positions[i].timeStamp = currentTime;
+                armCurrentMessages[armIndex].positions[i].joint_uri = youBotConfiguration.youBotArmConfigurations[armIndex].jointNames[i];
+                armCurrentMessages[armIndex].positions[i].value = currentJointCurrent.current.value(); 
+              
             }
+                //currents = armCurrentMessages[armIndex].positions;
 
             // check if trajectory controller is finished
 			bool areTrajectoryControllersDone = true;
@@ -1299,7 +1288,7 @@ void YouBotOODLWrapper::computeOODLSensorReadings()
 
 void YouBotOODLWrapper::publishOODLSensorReadings()
 {
-      
+     
     if (youBotConfiguration.hasBase)
     {
         youBotConfiguration.baseConfiguration.odometryBroadcaster.sendTransform(odometryTransform);
@@ -1312,12 +1301,29 @@ void YouBotOODLWrapper::publishOODLSensorReadings()
         for (int armIndex = 0; armIndex < static_cast<int> (youBotConfiguration.youBotArmConfigurations.size()); armIndex++)
         {
             youBotConfiguration.youBotArmConfigurations[armIndex].armJointStatePublisher.publish(armJointStateMessages[armIndex]);
-            youBotConfiguration.youBotArmConfigurations[armIndex].armjoint1ParameterCommandPublisher.publish(armConfigMessages[armIndex]);
+
+            //youBotConfiguration.youBotArmConfigurations[armIndex].armjoint1ParameterCommandPublisher.publish(armConfigMessages[armIndex]);
+            youBotConfiguration.youBotArmConfigurations[armIndex].armCurrentPublisher.publish(armCurrentMessages[armIndex]);
+              
         }
     }
 
 
 }
+
+/*void YouBotOODLWrapper::publishPID()
+{
+      if (youBotConfiguration.hasArms)
+    {
+        for (int armIndex = 0; armIndex < static_cast<int> (youBotConfiguration.youBotArmConfigurations.size()); armIndex++)
+        {
+           
+            youBotConfiguration.youBotArmConfigurations[armIndex].armjoint1ParameterCommandPublisher.publish(armConfigMessages[armIndex]);
+        }
+    }
+
+
+}*/
 
 
 
@@ -1416,132 +1422,132 @@ bool YouBotOODLWrapper::ParametersControlCallback(std_srvs::Empty::Request& requ
             IClippingParameterFirstParametersSpeedControl_actual.resize(youBotArmDoF);
       
       
-            ros::param::get("P_Sec_Pos_joint_1",PParameterSecondParametersPositionControl_actual[0]);
-            ros::param::get("P_Sec_Pos_joint_2",PParameterSecondParametersPositionControl_actual[1]);
-            ros::param::get("P_Sec_Pos_joint_3",PParameterSecondParametersPositionControl_actual[2]);
-            ros::param::get("P_Sec_Pos_joint_4",PParameterSecondParametersPositionControl_actual[3]);
-            ros::param::get("P_Sec_Pos_joint_5",PParameterSecondParametersPositionControl_actual[4]);
+            ros::param::get("gain/arm_joint_1/secPos/p",PParameterSecondParametersPositionControl_actual[0]);
+            ros::param::get("gain/arm_joint_2/secPos/p",PParameterSecondParametersPositionControl_actual[1]);
+            ros::param::get("gain/arm_joint_3/secPos/p",PParameterSecondParametersPositionControl_actual[2]);
+            ros::param::get("gain/arm_joint_4/secPos/p",PParameterSecondParametersPositionControl_actual[3]);
+            ros::param::get("gain/arm_joint_5/secPos/p",PParameterSecondParametersPositionControl_actual[4]);
           //I-pos_sec
-            ros::param::get("I_Sec_Pos_joint_1",IParameterSecondParametersPositionControl_actual[0]);
-            ros::param::get("I_Sec_Pos_joint_2",IParameterSecondParametersPositionControl_actual[1]);
-            ros::param::get("I_Sec_Pos_joint_3",IParameterSecondParametersPositionControl_actual[2]);
-            ros::param::get("I_Sec_Pos_joint_4",IParameterSecondParametersPositionControl_actual[3]);
-            ros::param::get("I_Sec_Pos_joint_5",IParameterSecondParametersPositionControl_actual[4]);
+            ros::param::get("gain/arm_joint_1/secPos/i",IParameterSecondParametersPositionControl_actual[0]);
+            ros::param::get("gain/arm_joint_2/secPos/i",IParameterSecondParametersPositionControl_actual[1]);
+            ros::param::get("gain/arm_joint_3/secPos/i",IParameterSecondParametersPositionControl_actual[2]);
+            ros::param::get("gain/arm_joint_4/secPos/i",IParameterSecondParametersPositionControl_actual[3]);
+            ros::param::get("gain/arm_joint_5/secPos/i",IParameterSecondParametersPositionControl_actual[4]);
          //D-pos_sec
-            ros::param::get("D_Sec_Pos_joint_1",DParameterSecondParametersPositionControl_actual[0]);
-            ros::param::get("D_Sec_Pos_joint_2",DParameterSecondParametersPositionControl_actual[1]);
-            ros::param::get("D_Sec_Pos_joint_3",DParameterSecondParametersPositionControl_actual[2]);
-            ros::param::get("D_Sec_Pos_joint_4",DParameterSecondParametersPositionControl_actual[3]);
-            ros::param::get("D_Sec_Pos_joint_5",DParameterSecondParametersPositionControl_actual[4]);
+            ros::param::get("gain/arm_joint_1/secPos/d",DParameterSecondParametersPositionControl_actual[0]);
+            ros::param::get("gain/arm_joint_2/secPos/d",DParameterSecondParametersPositionControl_actual[1]);
+            ros::param::get("gain/arm_joint_3/secPos/d",DParameterSecondParametersPositionControl_actual[2]);
+            ros::param::get("gain/arm_joint_4/secPos/d",DParameterSecondParametersPositionControl_actual[3]);
+            ros::param::get("gain/arm_joint_5/secPos/d",DParameterSecondParametersPositionControl_actual[4]);
         // ICli_Pos_sec
 
-            ros::param::get("IClip_Sec_Pos_joint_1",IClippingParameterSecondParametersPositionControl_actual[0]);
-            ros::param::get("IClip_Sec_Pos_joint_2",IClippingParameterSecondParametersPositionControl_actual[1]);
-            ros::param::get("IClip_Sec_Pos_joint_3",IClippingParameterSecondParametersPositionControl_actual[2]);
-            ros::param::get("IClip_Sec_Pos_joint_4",IClippingParameterSecondParametersPositionControl_actual[3]);
-            ros::param::get("IClip_Sec_Pos_joint_5",IClippingParameterSecondParametersPositionControl_actual[4]);
+            ros::param::get("gain/arm_joint_1/secPos/i_Clip",IClippingParameterSecondParametersPositionControl_actual[0]);
+            ros::param::get("gain/arm_joint_2/secPos/i_Clip",IClippingParameterSecondParametersPositionControl_actual[1]);
+            ros::param::get("gain/arm_joint_3/secPos/i_Clip",IClippingParameterSecondParametersPositionControl_actual[2]);
+            ros::param::get("gain/arm_joint_4/secPos/i_Clip",IClippingParameterSecondParametersPositionControl_actual[3]);
+            ros::param::get("gain/arm_joint_5/secPos/i_Clip",IClippingParameterSecondParametersPositionControl_actual[4]);
 
         //IClip_speed_sec
-            ros::param::get("IClip_Sec_Speed_joint_1",IClippingParameterSecondParametersSpeedControl_actual[0]);
-            ros::param::get("IClip_Sec_Speed_joint_2",IClippingParameterSecondParametersSpeedControl_actual[1]);
-            ros::param::get("IClip_Sec_Speed_joint_3",IClippingParameterSecondParametersSpeedControl_actual[2]);
-            ros::param::get("IClip_Sec_Speed_joint_4",IClippingParameterSecondParametersSpeedControl_actual[3]);
-            ros::param::get("IClip_Sec_Speed_joint_5",IClippingParameterSecondParametersSpeedControl_actual[4]);
+            ros::param::get("gain/arm_joint_1/secSpeed/i_Clip",IClippingParameterSecondParametersSpeedControl_actual[0]);
+            ros::param::get("gain/arm_joint_2/secSpeed/i_Clip",IClippingParameterSecondParametersSpeedControl_actual[1]);
+            ros::param::get("gain/arm_joint_3/secSpeed/i_Clip",IClippingParameterSecondParametersSpeedControl_actual[2]);
+            ros::param::get("gain/arm_joint_4/secSpeed/i_Clip",IClippingParameterSecondParametersSpeedControl_actual[3]);
+            ros::param::get("gain/arm_joint_5/secSpeed/i_Clip",IClippingParameterSecondParametersSpeedControl_actual[4]);
          //P_speed_sec
-            ros::param::get("P_Sec_Speed_joint_1",PParameterSecondParametersSpeedControl_actual[0]);
-            ros::param::get("P_Sec_Speed_joint_2",PParameterSecondParametersSpeedControl_actual[1]);
-            ros::param::get("P_Sec_Speed_joint_3",PParameterSecondParametersSpeedControl_actual[2]);
-            ros::param::get("P_Sec_Speed_joint_4",PParameterSecondParametersSpeedControl_actual[3]);
-            ros::param::get("P_Sec_Speed_joint_5",PParameterSecondParametersSpeedControl_actual[4]);
+            ros::param::get("gain/arm_joint_1/secSpeed/p",PParameterSecondParametersSpeedControl_actual[0]);
+            ros::param::get("gain/arm_joint_2/secSpeed/p",PParameterSecondParametersSpeedControl_actual[1]);
+            ros::param::get("gain/arm_joint_3/secSpeed/p",PParameterSecondParametersSpeedControl_actual[2]);
+            ros::param::get("gain/arm_joint_4/secSpeed/p",PParameterSecondParametersSpeedControl_actual[3]);
+            ros::param::get("gain/arm_joint_5/secSpeed/p",PParameterSecondParametersSpeedControl_actual[4]);
         //I_speed_sec
-            ros::param::get("I_Sec_Speed_joint_1",IParameterSecondParametersSpeedControl_actual[0]);
-            ros::param::get("I_Sec_Speed_joint_2",IParameterSecondParametersSpeedControl_actual[1]);
-            ros::param::get("I_Sec_Speed_joint_3",IParameterSecondParametersSpeedControl_actual[2]);
-            ros::param::get("I_Sec_Speed_joint_4",IParameterSecondParametersSpeedControl_actual[3]);
-            ros::param::get("I_Sec_Speed_joint_5",IParameterSecondParametersSpeedControl_actual[4]);
+            ros::param::get("gain/arm_joint_1/secSpeed/i",IParameterSecondParametersSpeedControl_actual[0]);
+            ros::param::get("gain/arm_joint_2/secSpeed/i",IParameterSecondParametersSpeedControl_actual[1]);
+            ros::param::get("gain/arm_joint_3/secSpeed/i",IParameterSecondParametersSpeedControl_actual[2]);
+            ros::param::get("gain/arm_joint_4/secSpeed/i",IParameterSecondParametersSpeedControl_actual[3]);
+            ros::param::get("gain/arm_joint_5/secSpeed/i",IParameterSecondParametersSpeedControl_actual[4]);
          //D_speed_sec
-            ros::param::get("D_Sec_Speed_joint_1",DParameterSecondParametersSpeedControl_actual[0]);
-            ros::param::get("D_Sec_Speed_joint_2",DParameterSecondParametersSpeedControl_actual[1]);
-            ros::param::get("D_Sec_Speed_joint_3",DParameterSecondParametersSpeedControl_actual[2]);
-            ros::param::get("D_Sec_Speed_joint_4",DParameterSecondParametersSpeedControl_actual[3]);
-            ros::param::get("D_Sec_Speed_joint_5",DParameterSecondParametersSpeedControl_actual[4]);
+            ros::param::get("gain/arm_joint_5/secSpeed/d",DParameterSecondParametersSpeedControl_actual[0]);
+            ros::param::get("gain/arm_joint_5/secSpeed/d",DParameterSecondParametersSpeedControl_actual[1]);
+            ros::param::get("gain/arm_joint_5/secSpeed/d",DParameterSecondParametersSpeedControl_actual[2]);
+            ros::param::get("gain/arm_joint_5/secSpeed/d",DParameterSecondParametersSpeedControl_actual[3]);
+            ros::param::get("gain/arm_joint_5/secSpeed/d",DParameterSecondParametersSpeedControl_actual[4]);
          // PID Current
-            ros::param::get("P_Current_joint_1",PParameterCurrentControl_actual[0]);
-            ros::param::get("P_Current_joint_2",PParameterCurrentControl_actual[1]);
-            ros::param::get("P_Current_joint_3",PParameterCurrentControl_actual[2]);
-            ros::param::get("P_Current_joint_4",PParameterCurrentControl_actual[3]);
-            ros::param::get("P_Current_joint_5",PParameterCurrentControl_actual[4]);
+            ros::param::get("gain/arm_joint_1/current/p",PParameterCurrentControl_actual[0]);
+            ros::param::get("gain/arm_joint_2/current/p",PParameterCurrentControl_actual[1]);
+            ros::param::get("gain/arm_joint_3/current/p",PParameterCurrentControl_actual[2]);
+            ros::param::get("gain/arm_joint_4/current/p",PParameterCurrentControl_actual[3]);
+            ros::param::get("gain/arm_joint_5/current/p",PParameterCurrentControl_actual[4]);
 
-            ros::param::get("I_Current_joint_1",IParameterCurrentControl_actual[0]);
-            ros::param::get("I_Current_joint_2",IParameterCurrentControl_actual[1]);
-            ros::param::get("I_Current_joint_3",IParameterCurrentControl_actual[2]);
-            ros::param::get("I_Current_joint_4",IParameterCurrentControl_actual[3]);
-            ros::param::get("I_Current_joint_5",IParameterCurrentControl_actual[4]);
+            ros::param::get("gain/arm_joint_1/current/i",IParameterCurrentControl_actual[0]);
+            ros::param::get("gain/arm_joint_2/current/i",IParameterCurrentControl_actual[1]);
+            ros::param::get("gain/arm_joint_3/current/i",IParameterCurrentControl_actual[2]);
+            ros::param::get("gain/arm_joint_4/current/i",IParameterCurrentControl_actual[3]);
+            ros::param::get("gain/arm_joint_5/current/i",IParameterCurrentControl_actual[4]);
 
-             ros::param::get("D_Current_joint_1",DParameterCurrentControl_actual[0]);
-             ros::param::get("D_Current_joint_2",DParameterCurrentControl_actual[1]);
-             ros::param::get("D_Current_joint_3",DParameterCurrentControl_actual[2]);
-             ros::param::get("D_Current_joint_4",DParameterCurrentControl_actual[3]);
-             ros::param::get("D_Current_joint_5",DParameterCurrentControl_actual[4]);
+             ros::param::get("gain/arm_joint_1/current/d",DParameterCurrentControl_actual[0]);
+             ros::param::get("gain/arm_joint_2/current/d",DParameterCurrentControl_actual[1]);
+             ros::param::get("gain/arm_joint_3/current/d",DParameterCurrentControl_actual[2]);
+             ros::param::get("gain/arm_joint_4/current/d",DParameterCurrentControl_actual[3]);
+             ros::param::get("gain/arm_joint_5/current/d",DParameterCurrentControl_actual[4]);
 
-            ros::param::get("IClip_Current_joint_1",IClippingParameterCurrentControl_actual[0]);
-            ros::param::get("IClip_Current_joint_2",IClippingParameterCurrentControl_actual[1]);
-            ros::param::get("IClip_Current_joint_3",IClippingParameterCurrentControl_actual[2]);
-            ros::param::get("IClip_Current_joint_4",IClippingParameterCurrentControl_actual[3]);
-            ros::param::get("IClip_Current_joint_5",IClippingParameterCurrentControl_actual[4]);
+            ros::param::get("gain/arm_joint_1/current/i_Clip",IClippingParameterCurrentControl_actual[0]);
+            ros::param::get("gain/arm_joint_2/current/i_Clip",IClippingParameterCurrentControl_actual[1]);
+            ros::param::get("gain/arm_joint_3/current/i_Clip",IClippingParameterCurrentControl_actual[2]);
+            ros::param::get("gain/arm_joint_4/current/i_Clip",IClippingParameterCurrentControl_actual[3]);
+            ros::param::get("gain/arm_joint_5/current/i_Clip",IClippingParameterCurrentControl_actual[4]);
 
        //PID_First
           // P_pos
-            ros::param::get("P_First_Pos_joint_1",PParameterFirstParametersPositionControl_actual[0]);
-            ros::param::get("P_First_Pos_joint_2",PParameterFirstParametersPositionControl_actual[1]);
-            ros::param::get("P_First_Pos_joint_3",PParameterFirstParametersPositionControl_actual[2]);
-            ros::param::get("P_First_Pos_joint_4",PParameterFirstParametersPositionControl_actual[3]);
-            ros::param::get("P_First_Pos_joint_5",PParameterFirstParametersPositionControl_actual[4]);
+            ros::param::get("gain/arm_joint_1/firstPos/p",PParameterFirstParametersPositionControl_actual[0]);
+            ros::param::get("gain/arm_joint_2/firstPos/p",PParameterFirstParametersPositionControl_actual[1]);
+            ros::param::get("gain/arm_joint_3/firstPos/p",PParameterFirstParametersPositionControl_actual[2]);
+            ros::param::get("gain/arm_joint_4/firstPos/p",PParameterFirstParametersPositionControl_actual[3]);
+            ros::param::get("gain/arm_joint_5/firstPos/p",PParameterFirstParametersPositionControl_actual[4]);
          // P_Pos
-            ros::param::get("I_First_Pos_joint_1",IParameterFirstParametersPositionControl_actual[0]);
-            ros::param::get("I_First_Pos_joint_2",IParameterFirstParametersPositionControl_actual[1]);
-            ros::param::get("I_First_Pos_joint_3",IParameterFirstParametersPositionControl_actual[2]);
-            ros::param::get("I_First_Pos_joint_4",IParameterFirstParametersPositionControl_actual[3]);
-            ros::param::get("I_First_Pos_joint_5",IParameterFirstParametersPositionControl_actual[4]);
+            ros::param::get("gain/arm_joint_1/firstPos/i",IParameterFirstParametersPositionControl_actual[0]);
+            ros::param::get("gain/arm_joint_2/firstPos/i",IParameterFirstParametersPositionControl_actual[1]);
+            ros::param::get("gain/arm_joint_3/firstPos/i",IParameterFirstParametersPositionControl_actual[2]);
+            ros::param::get("gain/arm_joint_4/firstPos/i",IParameterFirstParametersPositionControl_actual[3]);
+            ros::param::get("gain/arm_joint_5/firstPos/i",IParameterFirstParametersPositionControl_actual[4]);
         //P_pos
-            ros::param::get("D_First_Pos_joint_1",DParameterFirstParametersPositionControl_actual[0]);
-            ros::param::get("D_First_Pos_joint_2",DParameterFirstParametersPositionControl_actual[1]);
-            ros::param::get("D_First_Pos_joint_3",DParameterFirstParametersPositionControl_actual[2]);
-            ros::param::get("D_First_Pos_joint_4",DParameterFirstParametersPositionControl_actual[3]);
-            ros::param::get("D_First_Pos_joint_5",DParameterFirstParametersPositionControl_actual[4]);
+            ros::param::get("gain/arm_joint_1/firstPos/d",DParameterFirstParametersPositionControl_actual[0]);
+            ros::param::get("gain/arm_joint_2/firstPos/d",DParameterFirstParametersPositionControl_actual[1]);
+            ros::param::get("gain/arm_joint_3/firstPos/d",DParameterFirstParametersPositionControl_actual[2]);
+            ros::param::get("gain/arm_joint_4/firstPos/d",DParameterFirstParametersPositionControl_actual[3]);
+            ros::param::get("gain/arm_joint_5/firstPos/d",DParameterFirstParametersPositionControl_actual[4]);
         // Iclip  pos
-            ros::param::get("IClip_First_Pos_joint_1",IClippingParameterFirstParametersPositionControl_actual[0]);
-            ros::param::get("IClip_First_Pos_joint_2",IClippingParameterFirstParametersPositionControl_actual[1]);
-            ros::param::get("IClip_First_Pos_joint_3",IClippingParameterFirstParametersPositionControl_actual[2]);
-            ros::param::get("IClip_First_Pos_joint_4",IClippingParameterFirstParametersPositionControl_actual[3]);
-            ros::param::get("IClip_First_Pos_joint_5",IClippingParameterFirstParametersPositionControl_actual[4]);
+            ros::param::get("gain/arm_joint_1/firstPos/i_Clip",IClippingParameterFirstParametersPositionControl_actual[0]);
+            ros::param::get("gain/arm_joint_2/firstPos/i_Clip",IClippingParameterFirstParametersPositionControl_actual[1]);
+            ros::param::get("gain/arm_joint_3/firstPos/i_Clip",IClippingParameterFirstParametersPositionControl_actual[2]);
+            ros::param::get("gain/arm_joint_4/firstPos/i_Clip",IClippingParameterFirstParametersPositionControl_actual[3]);
+            ros::param::get("gain/arm_joint_5/firstPos/i_Clip",IClippingParameterFirstParametersPositionControl_actual[4]);
 
 
 
         // P_pos
-            ros::param::get("P_First_Speed_joint_1",PParameterFirstParametersSpeedControl_actual[0]);
-            ros::param::get("P_First_Speed_joint_2",PParameterFirstParametersSpeedControl_actual[1]);
-            ros::param::get("P_First_Speed_joint_3",PParameterFirstParametersSpeedControl_actual[2]);
-            ros::param::get("P_First_Speed_joint_4",PParameterFirstParametersSpeedControl_actual[3]);
-            ros::param::get("P_First_Speed_joint_5",PParameterFirstParametersSpeedControl_actual[4]);
+            ros::param::get("gain/arm_joint_1/firstSpeed/p",PParameterFirstParametersSpeedControl_actual[0]);
+            ros::param::get("gain/arm_joint_2/firstSpeed/p",PParameterFirstParametersSpeedControl_actual[1]);
+            ros::param::get("gain/arm_joint_3/firstSpeed/p",PParameterFirstParametersSpeedControl_actual[2]);
+            ros::param::get("gain/arm_joint_4/firstSpeed/p",PParameterFirstParametersSpeedControl_actual[3]);
+            ros::param::get("gain/arm_joint_5/firstSpeed/p",PParameterFirstParametersSpeedControl_actual[4]);
          // P_Pos
-            ros::param::get("I_First_Speed_joint_1",IParameterFirstParametersSpeedControl_actual[0]);
-            ros::param::get("I_First_Speed_joint_2",IParameterFirstParametersSpeedControl_actual[1]);
-            ros::param::get("I_First_Speed_joint_3",IParameterFirstParametersSpeedControl_actual[2]);
-            ros::param::get("I_First_Speed_joint_4",IParameterFirstParametersSpeedControl_actual[3]);
-            ros::param::get("I_First_Speed_joint_5",IParameterFirstParametersSpeedControl_actual[4]);
+            ros::param::get("gain/arm_joint_1/firstSpeed/i",IParameterFirstParametersSpeedControl_actual[0]);
+            ros::param::get("gain/arm_joint_2/firstSpeed/i",IParameterFirstParametersSpeedControl_actual[1]);
+            ros::param::get("gain/arm_joint_3/firstSpeed/i",IParameterFirstParametersSpeedControl_actual[2]);
+            ros::param::get("gain/arm_joint_4/firstSpeed/i",IParameterFirstParametersSpeedControl_actual[3]);
+            ros::param::get("gain/arm_joint_5/firstSpeed/i",IParameterFirstParametersSpeedControl_actual[4]);
        //P_pos
-            ros::param::get("D_First_Speed_joint_1",DParameterFirstParametersSpeedControl_actual[0]);
-            ros::param::get("D_First_Speed_joint_2",DParameterFirstParametersSpeedControl_actual[1]);
-            ros::param::get("D_First_Speed_joint_3",DParameterFirstParametersSpeedControl_actual[2]);
-            ros::param::get("D_First_Speed_joint_4",DParameterFirstParametersSpeedControl_actual[3]);
-            ros::param::get("D_First_Speed_joint_5",DParameterFirstParametersSpeedControl_actual[4]);
+            ros::param::get("gain/arm_joint_1/firstSpeed/d",DParameterFirstParametersSpeedControl_actual[0]);
+            ros::param::get("gain/arm_joint_2/firstSpeed/d",DParameterFirstParametersSpeedControl_actual[1]);
+            ros::param::get("gain/arm_joint_3/firstSpeed/d",DParameterFirstParametersSpeedControl_actual[2]);
+            ros::param::get("gain/arm_joint_4/firstSpeed/d",DParameterFirstParametersSpeedControl_actual[3]);
+            ros::param::get("gain/arm_joint_5/firstSpeed/d",DParameterFirstParametersSpeedControl_actual[4]);
        // Iclip  pos
-            ros::param::get("IClip_First_Speed_joint_1",IClippingParameterFirstParametersSpeedControl_actual[0]);
-            ros::param::get("IClip_First_Speed_joint_2",IClippingParameterFirstParametersSpeedControl_actual[1]);
-            ros::param::get("IClip_First_Speed_joint_3",IClippingParameterFirstParametersSpeedControl_actual[2]);
-            ros::param::get("IClip_First_Speed_joint_4",IClippingParameterFirstParametersSpeedControl_actual[3]);
-            ros::param::get("IClip_First_Speed_joint_5",IClippingParameterFirstParametersSpeedControl_actual[4]); 
+            ros::param::get("gain/arm_joint_1/firstSpeed/i_Clip",IClippingParameterFirstParametersSpeedControl_actual[0]);
+            ros::param::get("gain/arm_joint_2/firstSpeed/i_Clip",IClippingParameterFirstParametersSpeedControl_actual[1]);
+            ros::param::get("gain/arm_joint_3/firstSpeed/i_Clip",IClippingParameterFirstParametersSpeedControl_actual[2]);
+            ros::param::get("gain/arm_joint_4/firstSpeed/i_Clip",IClippingParameterFirstParametersSpeedControl_actual[3]);
+            ros::param::get("gain/arm_joint_5/firstSpeed/i_Clip",IClippingParameterFirstParametersSpeedControl_actual[4]); 
 
             PParameterSecondParametersPositionControl_Parameter.resize(youBotArmDoF);
             IParameterSecondParametersPositionControl_Parameter.resize(youBotArmDoF);
@@ -1569,75 +1575,61 @@ bool YouBotOODLWrapper::ParametersControlCallback(std_srvs::Empty::Request& requ
             DParameterCurrentControl_Parameter.resize(youBotArmDoF);
             IClippingParameterCurrentControl_Parameter.resize(youBotArmDoF);
 
-            for (int i = 0; i< youBotArmDoF; ++i)
-            {
-          // PID-pos_sec
-                  PParameterSecondParametersPositionControl_Parameter[i].setParameter(PParameterSecondParametersPositionControl_actual[i]); 
-                  IParameterSecondParametersPositionControl_Parameter[i].setParameter(IParameterSecondParametersPositionControl_actual[i]); 
-                  DParameterSecondParametersPositionControl_Parameter[i].setParameter(DParameterSecondParametersPositionControl_actual[i]); 
-                  IClippingParameterSecondParametersPositionControl_Parameter[i].setParameter(IClippingParameterSecondParametersPositionControl_actual[i]);
-          //PID-speed_sec
-                  PParameterSecondParametersSpeedControl_Parameter[i].setParameter(PParameterSecondParametersSpeedControl_actual[i]); 
-                  IParameterSecondParametersSpeedControl_Parameter[i].setParameter(IParameterSecondParametersSpeedControl_actual[i]); 
-                  DParameterSecondParametersSpeedControl_Parameter[i].setParameter(DParameterSecondParametersSpeedControl_actual[i]); 
-                  IClippingParameterSecondParametersSpeedControl_Parameter[i].setParameter(IClippingParameterSecondParametersSpeedControl_actual[i]);
-        
-           // PID  Current
-                  PParameterCurrentControl_Parameter[i].setParameter(PParameterCurrentControl_actual[i]);
-                  IParameterCurrentControl_Parameter[i].setParameter(IParameterCurrentControl_actual[i]);
-                  DParameterCurrentControl_Parameter[i].setParameter(DParameterCurrentControl_actual[i]); 
-                  IClippingParameterCurrentControl_Parameter[i].setParameter(IClippingParameterCurrentControl_actual[i]);
-       
-
-          //pID_first _Speed      
-                   PParameterFirstParametersPositionControl_Parameter[i].setParameter(PParameterFirstParametersPositionControl_actual[i]);
-                   IParameterFirstParametersPositionControl_Parameter[i].setParameter(IParameterFirstParametersPositionControl_actual[i]);
-                   DParameterFirstParametersPositionControl_Parameter[i].setParameter(DParameterFirstParametersPositionControl_actual[i]);
-                   IClippingParameterFirstParametersPositionControl_Parameter[i].setParameter(IClippingParameterFirstParametersPositionControl_actual[i]);
-       
-         // speed_PID_Speed
-
-                   PParameterFirstParametersSpeedControl_Parameter[i].setParameter(PParameterFirstParametersSpeedControl_actual[i]);
-                   IParameterFirstParametersSpeedControl_Parameter[i].setParameter(IParameterFirstParametersSpeedControl_actual[i]);
-                   DParameterFirstParametersSpeedControl_Parameter[i].setParameter(DParameterFirstParametersSpeedControl_actual[i]);
-                   IClippingParameterFirstParametersSpeedControl_Parameter[i].setParameter(IClippingParameterFirstParametersSpeedControl_actual[i]);
-            }
-
-
-
            try{
                  youbot::EthercatMaster::getInstance().AutomaticSendOn(false); // ensure that all joint values will be send at the same time
 
 
                         for (int i = 0; i < youBotArmDoF; ++i) {
                        //PID_pos_sec
+                        PParameterSecondParametersPositionControl_Parameter[i].setParameter(PParameterSecondParametersPositionControl_actual[i]);
                         youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).setConfigurationParameter(PParameterSecondParametersPositionControl_Parameter[i]);
+                        IParameterSecondParametersPositionControl_Parameter[i].setParameter(IParameterSecondParametersPositionControl_actual[i]); 
                         youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).setConfigurationParameter(IParameterSecondParametersPositionControl_Parameter[i]);
+                        DParameterSecondParametersPositionControl_Parameter[i].setParameter(DParameterSecondParametersPositionControl_actual[i]);
                         youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).setConfigurationParameter(DParameterSecondParametersPositionControl_Parameter[i]);
-			 youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).setConfigurationParameter(IClippingParameterSecondParametersPositionControl_Parameter[i]);
+                        IClippingParameterSecondParametersPositionControl_Parameter[i].setParameter(IClippingParameterSecondParametersPositionControl_actual[i]);
+			youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).setConfigurationParameter(IClippingParameterSecondParametersPositionControl_Parameter[i]);
 			
                         //PID_speed_sec
+                        PParameterSecondParametersSpeedControl_Parameter[i].setParameter(PParameterSecondParametersSpeedControl_actual[i]);
                         youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).setConfigurationParameter(PParameterSecondParametersSpeedControl_Parameter[i]);
+                        IParameterSecondParametersSpeedControl_Parameter[i].setParameter(IParameterSecondParametersSpeedControl_actual[i]); 
                         youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).setConfigurationParameter(IParameterSecondParametersSpeedControl_Parameter[i]);
+                        DParameterSecondParametersSpeedControl_Parameter[i].setParameter(DParameterSecondParametersSpeedControl_actual[i]);
                         youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).setConfigurationParameter(DParameterSecondParametersSpeedControl_Parameter[i]);
+                        IClippingParameterSecondParametersSpeedControl_Parameter[i].setParameter(IClippingParameterSecondParametersSpeedControl_actual[i]);
                         youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).setConfigurationParameter(IClippingParameterSecondParametersSpeedControl_Parameter[i]);
 			
                       // PID Current
+                         PParameterCurrentControl_Parameter[i].setParameter(PParameterCurrentControl_actual[i]);
                         youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).setConfigurationParameter(PParameterCurrentControl_Parameter[i]);
+                        IParameterCurrentControl_Parameter[i].setParameter(IParameterCurrentControl_actual[i]);
                         youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).setConfigurationParameter(IParameterCurrentControl_Parameter[i]);
+                        DParameterCurrentControl_Parameter[i].setParameter(DParameterCurrentControl_actual[i]);
                         youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).setConfigurationParameter(DParameterCurrentControl_Parameter[i]);
+                        IClippingParameterCurrentControl_Parameter[i].setParameter(IClippingParameterCurrentControl_actual[i]);
                         youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).setConfigurationParameter(IClippingParameterCurrentControl_Parameter[i]);	
 
                       // PID First  pos
+
+                        PParameterFirstParametersPositionControl_Parameter[i].setParameter(PParameterFirstParametersPositionControl_actual[i]);
                         youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).setConfigurationParameter(PParameterFirstParametersPositionControl_Parameter[i]);
+                        IParameterFirstParametersPositionControl_Parameter[i].setParameter(IParameterFirstParametersPositionControl_actual[i]);
                         youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).setConfigurationParameter(IParameterFirstParametersPositionControl_Parameter[i]);
+                        DParameterFirstParametersPositionControl_Parameter[i].setParameter(DParameterFirstParametersPositionControl_actual[i]);
                         youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).setConfigurationParameter(DParameterFirstParametersPositionControl_Parameter[i]);
+                        IClippingParameterFirstParametersPositionControl_Parameter[i].setParameter(IClippingParameterFirstParametersPositionControl_actual[i]);
                         youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).setConfigurationParameter(IClippingParameterFirstParametersPositionControl_Parameter[i]);
                    
                       // PID First  speed
+
+                        PParameterFirstParametersSpeedControl_Parameter[i].setParameter(PParameterFirstParametersSpeedControl_actual[i]);
                         youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).setConfigurationParameter(PParameterFirstParametersSpeedControl_Parameter[i]);
+                        IParameterFirstParametersSpeedControl_Parameter[i].setParameter(IParameterFirstParametersSpeedControl_actual[i]);
                         youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).setConfigurationParameter(IParameterFirstParametersSpeedControl_Parameter[i]);
+                        DParameterFirstParametersSpeedControl_Parameter[i].setParameter(DParameterFirstParametersSpeedControl_actual[i]);
                         youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).setConfigurationParameter(DParameterFirstParametersSpeedControl_Parameter[i]);
+                        IClippingParameterFirstParametersSpeedControl_Parameter[i].setParameter(IClippingParameterFirstParametersSpeedControl_actual[i]);
                         youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).setConfigurationParameter(IClippingParameterFirstParametersSpeedControl_Parameter[i]);
 			
                      }
@@ -1661,6 +1653,194 @@ bool YouBotOODLWrapper::ParametersControlCallback(std_srvs::Empty::Request& requ
 	return true; 
 
 }
+
+
+
+
+//void YouBotOODLWrapper::updateParameter()
+bool YouBotOODLWrapper::ParametersReadControlCallback(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response, int armIndex)
+{
+    
+     ROS_INFO("Parameter on the Arm");
+     ROS_ASSERT(0 <= armIndex && armIndex < static_cast<int>(youBotConfiguration.youBotArmConfigurations.size()));
+     
+     if (youBotConfiguration.hasArms && youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm != 0) { 
+      //P-pos_sec 
+            PParameterSecondParametersPositionControl_actual.resize(youBotArmDoF);
+            IParameterSecondParametersPositionControl_actual.resize(youBotArmDoF);
+            DParameterSecondParametersPositionControl_actual.resize(youBotArmDoF);
+            IClippingParameterSecondParametersPositionControl_actual.resize(youBotArmDoF);
+
+            PParameterSecondParametersSpeedControl_actual.resize(youBotArmDoF);
+            IParameterSecondParametersSpeedControl_actual.resize(youBotArmDoF);
+            DParameterSecondParametersSpeedControl_actual.resize(youBotArmDoF);
+            IClippingParameterSecondParametersSpeedControl_actual.resize(youBotArmDoF);
+
+            PParameterCurrentControl_actual.resize(youBotArmDoF);
+            IParameterCurrentControl_actual.resize(youBotArmDoF);
+            DParameterCurrentControl_actual.resize(youBotArmDoF);
+            IClippingParameterCurrentControl_actual.resize(youBotArmDoF);
+
+            PParameterFirstParametersPositionControl_actual.resize(youBotArmDoF);
+            IParameterFirstParametersPositionControl_actual.resize(youBotArmDoF);
+            DParameterFirstParametersPositionControl_actual.resize(youBotArmDoF);
+            IClippingParameterFirstParametersPositionControl_actual.resize(youBotArmDoF);
+
+            PParameterFirstParametersSpeedControl_actual.resize(youBotArmDoF);
+            IParameterFirstParametersSpeedControl_actual.resize(youBotArmDoF);
+            DParameterFirstParametersSpeedControl_actual.resize(youBotArmDoF);
+            IClippingParameterFirstParametersSpeedControl_actual.resize(youBotArmDoF);
+            
+
+            PParameterSecondParametersPositionControl_Parameter.resize(youBotArmDoF);
+            IParameterSecondParametersPositionControl_Parameter.resize(youBotArmDoF);
+            DParameterSecondParametersPositionControl_Parameter.resize(youBotArmDoF);
+            IClippingParameterSecondParametersPositionControl_Parameter.resize(youBotArmDoF);
+
+            PParameterSecondParametersSpeedControl_Parameter.resize(youBotArmDoF);
+            IParameterSecondParametersSpeedControl_Parameter.resize(youBotArmDoF);
+            DParameterSecondParametersSpeedControl_Parameter.resize(youBotArmDoF);
+            IClippingParameterSecondParametersSpeedControl_Parameter.resize(youBotArmDoF);
+
+            PParameterFirstParametersPositionControl_Parameter.resize(youBotArmDoF);
+            IParameterFirstParametersPositionControl_Parameter.resize(youBotArmDoF);
+            DParameterFirstParametersPositionControl_Parameter.resize(youBotArmDoF);
+            IClippingParameterFirstParametersPositionControl_Parameter.resize(youBotArmDoF);
+
+            PParameterFirstParametersSpeedControl_Parameter.resize(youBotArmDoF);
+            IParameterFirstParametersSpeedControl_Parameter.resize(youBotArmDoF);
+            DParameterFirstParametersSpeedControl_Parameter.resize(youBotArmDoF);
+            IClippingParameterFirstParametersSpeedControl_Parameter.resize(youBotArmDoF);
+
+
+            PParameterCurrentControl_Parameter.resize(youBotArmDoF);
+            IParameterCurrentControl_Parameter.resize(youBotArmDoF);
+            DParameterCurrentControl_Parameter.resize(youBotArmDoF);
+            IClippingParameterCurrentControl_Parameter.resize(youBotArmDoF);
+
+ 
+           try{
+                 youbot::EthercatMaster::getInstance().AutomaticSendOn(false); // ensure that all joint values will be send at the same time
+
+
+                   for (int armIndex = 0; armIndex < static_cast<int> (youBotConfiguration.youBotArmConfigurations.size()); armIndex++) //delete each arm
+                     {
+
+                        std::cout << "===========================================================" << std::endl;
+                        for (int i = 0; i < youBotArmDoF; ++i) {
+                     
+                        std::cout << std::endl << "===========================================================" << std::endl;
+                        std::cout << "Joint: " << youBotConfiguration.youBotArmConfigurations[armIndex].jointNames[i] << std::endl;
+
+                        
+                        //PID_pos_first
+                        youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).getConfigurationParameter(PParameterFirstParametersPositionControl_Parameter[i]);
+                        PParameterFirstParametersPositionControl_Parameter[i].getParameter(PParameterFirstParametersPositionControl_actual[i]);
+                        std::cout << "PParameterFirstParametersPositionControl \t\tactual: " << PParameterFirstParametersPositionControl_actual[i] << std::endl;
+                        
+                        youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).getConfigurationParameter(IParameterFirstParametersPositionControl_Parameter[i]);
+                        IParameterFirstParametersPositionControl_Parameter[i].getParameter(IParameterFirstParametersPositionControl_actual[i]);
+                        std::cout << "IParameterFirstParametersPositionControl \t\tactual: " << IParameterFirstParametersPositionControl_actual[i] << std::endl;
+                        
+                        youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).getConfigurationParameter(DParameterFirstParametersPositionControl_Parameter[i]);
+                        DParameterFirstParametersPositionControl_Parameter[i].getParameter(DParameterFirstParametersPositionControl_actual[i]);
+                        std::cout << "DParameterFirstParametersPositionControl \t\tactual: " << DParameterFirstParametersPositionControl_actual[i] << std::endl;
+   
+                        youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).getConfigurationParameter(IClippingParameterFirstParametersPositionControl_Parameter[i]);
+                        IClippingParameterFirstParametersPositionControl_Parameter[i].getParameter(IClippingParameterFirstParametersPositionControl_actual[i]);
+                        std::cout << "IClippingParameterFirstParametersPositionControl \tactual: " << IClippingParameterFirstParametersPositionControl_actual[i] << std::endl;
+                
+                       
+                        
+                        // PID First  speed
+                        youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).getConfigurationParameter(PParameterFirstParametersSpeedControl_Parameter[i]);
+                        PParameterFirstParametersSpeedControl_Parameter[i].getParameter(PParameterFirstParametersSpeedControl_actual[i]);
+                        std::cout << "PParameterFirstParametersSpeedControl \t\t\tactual: " << PParameterFirstParametersSpeedControl_actual[i] << std::endl;
+
+                        youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).getConfigurationParameter(IParameterFirstParametersSpeedControl_Parameter[i]);
+                        IParameterFirstParametersSpeedControl_Parameter[i].getParameter(IParameterFirstParametersSpeedControl_actual[i]);
+                        std::cout << "IParameterFirstParametersSpeedControl \t\t\tactual: " << IParameterFirstParametersSpeedControl_actual[i] << std::endl;
+
+                        youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).getConfigurationParameter(DParameterFirstParametersSpeedControl_Parameter[i]);
+                        DParameterFirstParametersSpeedControl_Parameter[i].getParameter(DParameterFirstParametersSpeedControl_actual[i]);
+                        std::cout << "DParameterFirstParametersSpeedControl \t\t\tactual: " << DParameterFirstParametersSpeedControl_actual[i] << std::endl;
+
+                        youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).getConfigurationParameter(IClippingParameterFirstParametersSpeedControl_Parameter[i]);
+			IClippingParameterFirstParametersSpeedControl_Parameter[i].getParameter(IClippingParameterFirstParametersSpeedControl_actual[i]);
+                        std::cout << "IClippingParameterFirstParametersSpeedControl \t\tactual: " << IClippingParameterFirstParametersSpeedControl_actual[i] << std::endl;
+
+                         // PID_Second_position
+                        youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).getConfigurationParameter(PParameterSecondParametersPositionControl_Parameter[i]);
+                        PParameterSecondParametersPositionControl_Parameter[i].getParameter(PParameterSecondParametersPositionControl_actual[i]);
+                        std::cout << "PParameterSecondParametersPositionControl \t\tactual: " << PParameterSecondParametersPositionControl_actual[i] << std::endl;
+
+                        youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).getConfigurationParameter(IParameterSecondParametersPositionControl_Parameter[i]);
+                        IParameterSecondParametersPositionControl_Parameter[i].getParameter(IParameterSecondParametersPositionControl_actual[i]); 
+                        std::cout << "IParameterSecondParametersPositionControl \t\tactual: " << IParameterSecondParametersPositionControl_actual[i] << std::endl;
+
+                        youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).getConfigurationParameter(DParameterSecondParametersPositionControl_Parameter[i]);
+                        DParameterSecondParametersPositionControl_Parameter[i].getParameter(DParameterSecondParametersPositionControl_actual[i]); 
+                        std::cout << "DParameterSecondParametersPositionControl \t\tactual: " << DParameterSecondParametersPositionControl_actual[i] << std::endl;
+
+			youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).getConfigurationParameter(IClippingParameterSecondParametersPositionControl_Parameter[i]);
+                        IClippingParameterSecondParametersPositionControl_Parameter[i].getParameter(IClippingParameterSecondParametersPositionControl_actual[i]);
+			std::cout << "IClippingParameterSecondParametersPositionControl \tactual: " << IClippingParameterSecondParametersPositionControl_actual[i] << std::endl;
+
+                        //PID_speed_sec
+                        youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).getConfigurationParameter(PParameterSecondParametersSpeedControl_Parameter[i]);
+                        PParameterSecondParametersSpeedControl_Parameter[i].getParameter(PParameterSecondParametersSpeedControl_actual[i]);
+                        std::cout << "PParameterSecondParametersSpeedControl \t\t\tactual: " << PParameterSecondParametersSpeedControl_actual[i] << std::endl;
+
+                        youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).getConfigurationParameter(IParameterSecondParametersSpeedControl_Parameter[i]);
+                        IParameterSecondParametersSpeedControl_Parameter[i].getParameter(IParameterSecondParametersSpeedControl_actual[i]);
+                        std::cout << "IParameterSecondParametersSpeedControl \t\t\tactual: " << IParameterSecondParametersSpeedControl_actual[i] << std::endl;
+                        youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).getConfigurationParameter(DParameterSecondParametersSpeedControl_Parameter[i]);
+                         DParameterSecondParametersSpeedControl_Parameter[i].getParameter(DParameterSecondParametersSpeedControl_actual[i]);
+                        std::cout << "DParameterSecondParametersSpeedControl \t\t\tactual: " << DParameterSecondParametersSpeedControl_actual[i] << std::endl;
+                        youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).getConfigurationParameter(IClippingParameterSecondParametersSpeedControl_Parameter[i]);
+                        IClippingParameterSecondParametersSpeedControl_Parameter[i].getParameter(IClippingParameterSecondParametersSpeedControl_actual[i]);
+                        std::cout << "IClippingParameterSecondParametersSpeedControl \t\tactual: " << IClippingParameterSecondParametersSpeedControl_actual[i] << std::endl;
+
+			
+                      // PID Current
+                        youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).getConfigurationParameter(PParameterCurrentControl_Parameter[i]);
+                        PParameterCurrentControl_Parameter[i].getParameter(PParameterCurrentControl_actual[i]);
+                        std::cout << "PParameterCurrentControl     \t\t\t\tactual: " << PParameterCurrentControl_actual[i] << std::endl;
+
+                        youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).getConfigurationParameter(IParameterCurrentControl_Parameter[i]);
+                        IParameterCurrentControl_Parameter[i].getParameter(IParameterCurrentControl_actual[i]);
+                        std::cout << "IParameterCurrentControl \t\t\t\tactual: " << IParameterCurrentControl_actual[i] << std::endl;
+
+                        youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).getConfigurationParameter(DParameterCurrentControl_Parameter[i]);
+                        DParameterCurrentControl_Parameter[i].getParameter(DParameterCurrentControl_actual[i]);
+                        std::cout << "DParameterCurrentControl \t\t\t\tactual: " << DParameterCurrentControl_actual[i] << std::endl;
+
+                        youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).getConfigurationParameter(IClippingParameterCurrentControl_Parameter[i]);
+                        IClippingParameterCurrentControl_Parameter[i].getParameter(IClippingParameterCurrentControl_actual[i]);	
+                        std::cout << "IClippingParameterCurrentControl \t\t\tactual: " << IClippingParameterCurrentControl_actual[i] << std::endl;
+                      
+                       
+                     }
+
+               }
+
+                youbot::EthercatMaster::getInstance().AutomaticSendOn(true); // ensure that all joint values will be send at the same time
+
+	 } catch (std::exception& e) {
+			std::string errorMessage = e.what();
+			ROS_WARN("Cannot  configuration the arm : %s", errorMessage.c_str());
+			return false;
+	  }
+                
+	} else {
+		ROS_ERROR("Arm%i not initialized!", armIndex+1);
+		return false;      
+
+     } 
+	return true; 
+
+}
+
 
 
 bool YouBotOODLWrapper::switchOffArmMotorsCallback(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response, int armIndex) {
