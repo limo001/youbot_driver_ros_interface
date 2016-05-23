@@ -66,7 +66,6 @@
 #include "brics_actuator/JointTorques.h"
 #include "youbot_driver_ros_interface/JointCurrents.h"
 #include "youbot_driver_ros_interface/JointPWMs.h"
-#include "brics_actuator/JointCurrents.h"
 
 /* OODL includes */
 #include "YouBotConfiguration.h"

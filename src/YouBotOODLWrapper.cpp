@@ -229,7 +229,7 @@ void YouBotOODLWrapper::initializeArm(std::string armName, bool enableStandardGr
     youBotConfiguration.youBotArmConfigurations[armIndex].armjoint1ParameterCommandPublisher = node.advertise<dynamic_reconfigure::Config> (topicName.str(), 1);*/
 
     topicName.str("");
-    topicName <<youBotConfiguration.youBotArmConfigurations[armIndex].commandTopicName << "arm_controller/current_command/updates";
+    topicName <<"joint_current";
     youBotConfiguration.youBotArmConfigurations[armIndex].armCurrentPublisher = node.advertise<brics_actuator::JointPositions> (topicName.str(), 1);
 
    

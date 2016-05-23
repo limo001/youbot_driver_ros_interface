@@ -21,137 +21,137 @@ or enable the USE_SETCAP flag in the cmake file and recompile again.
 
         <!-- Set PID_sec_pos -->
         
-        <param name="gain/arm_joint_4/secPos/p" type="int" value="101"/>
-        <param name="gain/arm_joint_3/secPos/p" type="int" value="101"/>
-        <param name="gain/arm_joint_2/secPos/p" type="int" value="101"/>
-        <param name="gain/arm_joint_5/secPos/p" type="int" value="101"/>
-        <param name="gain/arm_joint_1/secPos/p" type="int" value="101"/>
+        <param name="gain/arm_joint_1/secPos/p" type="int" value="1000"/>
+        <param name="gain/arm_joint_2/secPos/p" type="int" value="1000"/>
+        <param name="gain/arm_joint_3/secPos/p" type="int" value="1000"/>
+        <param name="gain/arm_joint_4/secPos/p" type="int" value="1000"/>
+        <param name="gain/arm_joint_5/secPos/p" type="int" value="1000"/>
  
    
-        <param name="gain/arm_joint_5/secPos/i" type="int" value="1"/>
-        <param name="gain/arm_joint_4/secPos/i" type="int" value="1"/>
-        <param name="gain/arm_joint_3/secPos/i" type="int" value="1"/>
-        <param name="gain/arm_joint_2/secPos/i" type="int" value="1"/>
-        <param name="gain/arm_joint_1/secPos/i" type="int" value="1"/>
+        <param name="gain/arm_joint_1/secPos/i" type="int" value="0"/>
+        <param name="gain/arm_joint_2/secPos/i" type="int" value="0"/>
+        <param name="gain/arm_joint_3/secPos/i" type="int" value="0"/>
+        <param name="gain/arm_joint_4/secPos/i" type="int" value="0"/>
+        <param name="gain/arm_joint_5/secPos/i" type="int" value="0"/>
 
 
-        <param name="gain/arm_joint_5/secPos/d" type="int" value="1"/>
-        <param name="gain/arm_joint_4/secPos/d" type="int" value="1"/>
-        <param name="gain/arm_joint_3/secPos/d" type="int" value="1"/>
-        <param name="gain/arm_joint_2/secPos/d" type="int" value="1"/>
-        <param name="gain/arm_joint_1/secPos/d" type="int" value="1"/>
+        <param name="gain/arm_joint_1/secPos/d" type="int" value="0"/>
+        <param name="gain/arm_joint_2/secPos/d" type="int" value="0"/>
+        <param name="gain/arm_joint_3/secPos/d" type="int" value="0"/>
+        <param name="gain/arm_joint_4/secPos/d" type="int" value="0"/>
+        <param name="gain/arm_joint_5/secPos/d" type="int" value="0"/>
 
 
-        <param name="gain/arm_joint_5/secPos/i_Clip" type="int" value="501"/>
-        <param name="gain/arm_joint_4/secPos/i_Clip" type="int" value="501"/>
-        <param name="gain/arm_joint_3/secPos/i_Clip" type="int" value="501"/>
-        <param name="gain/arm_joint_2/secPos/i_Clip" type="int" value="501"/>
-        <param name="gain/arm_joint_1/secPos/i_Clip" type="int" value="501"/>
+        <param name="gain/arm_joint_1/secPos/i_Clip" type="int" value="1000"/>
+        <param name="gain/arm_joint_2/secPos/i_Clip" type="int" value="1000"/>
+        <param name="gain/arm_joint_3/secPos/i_Clip" type="int" value="1000"/>
+        <param name="gain/arm_joint_4/secPos/i_Clip" type="int" value="1000"/>
+        <param name="gain/arm_joint_5/secPos/i_Clip" type="int" value="1000"/>
 
        <!-- Set PID_sec_speed -->
-        <param name="gain/arm_joint_5/secSpeed/p" type="int" value="101"/>
-        <param name="gain/arm_joint_4/secSpeed/p" type="int" value="101"/>
-        <param name="gain/arm_joint_3/secSpeed/p" type="int" value="101"/>
-        <param name="gain/arm_joint_2/secSpeed/p" type="int" value="101"/>
-        <param name="gain/arm_joint_1/secSpeed/p" type="int" value="101"/>
+        <param name="gain/arm_joint_1/secSpeed/p" type="int" value="3000"/>
+        <param name="gain/arm_joint_2/secSpeed/p" type="int" value="3000"/>
+        <param name="gain/arm_joint_3/secSpeed/p" type="int" value="5000"/>
+        <param name="gain/arm_joint_4/secSpeed/p" type="int" value="2500"/>
+        <param name="gain/arm_joint_5/secSpeed/p" type="int" value="600"/>
 
-        <param name="gain/arm_joint_5/secSpeed/i" type="int" value="201"/>
-        <param name="gain/arm_joint_4/secSpeed/i" type="int" value="201"/>
-        <param name="gain/arm_joint_3/secSpeed/i" type="int" value="201"/>
-        <param name="gain/arm_joint_2/secSpeed/i" type="int" value="201"/>
-        <param name="gain/arm_joint_1/secSpeed/i" type="int" value="201"/>
+        <param name="gain/arm_joint_1/secSpeed/i" type="int" value="5000"/>
+        <param name="gain/arm_joint_2/secSpeed/i" type="int" value="10000"/>
+        <param name="gain/arm_joint_3/secSpeed/i" type="int" value="3000"/>
+        <param name="gain/arm_joint_4/secSpeed/i" type="int" value="3000"/>
+        <param name="gain/arm_joint_5/secSpeed/i" type="int" value="1500"/>
 
-        <param name="gain/arm_joint_5/secSpeed/d" type="int" value="1"/>
-        <param name="gain/arm_joint_4/secSpeed/d" type="int" value="1"/>
-        <param name="gain/arm_joint_3/secSpeed/d" type="int" value="1"/>
-        <param name="gain/arm_joint_2/secSpeed/d" type="int" value="1"/>
-        <param name="gain/arm_joint_1/secSpeed/d" type="int" value="1"/>
+        <param name="gain/arm_joint_1/secSpeed/d" type="int" value="800"/>
+        <param name="gain/arm_joint_2/secSpeed/d" type="int" value="800"/>
+        <param name="gain/arm_joint_3/secSpeed/d" type="int" value="800"/>
+        <param name="gain/arm_joint_4/secSpeed/d" type="int" value="800"/>
+        <param name="gain/arm_joint_5/secSpeed/d" type="int" value="100"/>
 
 
-        <param name="gain/arm_joint_5/secSpeed/i_Clip" type="int" value="101"/>
-        <param name="gain/arm_joint_4/secSpeed/i_Clip" type="int" value="101"/>
-        <param name="gain/arm_joint_3/secSpeed/i_Clip" type="int" value="101"/>
-        <param name="gain/arm_joint_2/secSpeed/i_Clip" type="int" value="101"/>
-        <param name="gain/arm_joint_1/secSpeed/i_Clip" type="int" value="101"/>
+        <param name="gain/arm_joint_1/secSpeed/i_Clip" type="int" value="1000"/>
+        <param name="gain/arm_joint_2/secSpeed/i_Clip" type="int" value="1000"/>
+        <param name="gain/arm_joint_3/secSpeed/i_Clip" type="int" value="1000"/>
+        <param name="gain/arm_joint_4/secSpeed/i_Clip" type="int" value="1000"/>
+        <param name="gain/arm_joint_5/secSpeed/i_Clip" type="int" value="1000"/>
 
          <!-- Set PID_current -->
-        <param name="gain/arm_joint_5/current/p" type="int" value="121"/>
-        <param name="gain/arm_joint_4/current/p" type="int" value="121"/>
-        <param name="gain/arm_joint_3/current/p" type="int" value="121"/>
-        <param name="gain/arm_joint_2/current/p" type="int" value="121"/>
-        <param name="gain/arm_joint_1/current/p" type="int" value="121"/>
+        <param name="gain/arm_joint_1/current/p" type="int" value="0"/>
+        <param name="gain/arm_joint_2/current/p" type="int" value="0"/>
+        <param name="gain/arm_joint_3/current/p" type="int" value="0"/>
+        <param name="gain/arm_joint_4/current/p" type="int" value="0"/>
+        <param name="gain/arm_joint_5/current/p" type="int" value="0"/>
 
 
-        <param name="gain/arm_joint_5/current/i" type="int" value="120"/>
-        <param name="gain/arm_joint_4/current/i" type="int" value="120"/>
-        <param name="gain/arm_joint_3/current/i" type="int" value="120"/>
-        <param name="gain/arm_joint_2/current/i" type="int" value="120"/>
-        <param name="gain/arm_joint_1/current/i" type="int" value="120"/>
+        <param name="gain/arm_joint_1/current/i" type="int" value="30000"/>
+        <param name="gain/arm_joint_2/current/i" type="int" value="30000"/>
+        <param name="gain/arm_joint_3/current/i" type="int" value="60000"/>
+        <param name="gain/arm_joint_4/current/i" type="int" value="60000"/>
+        <param name="gain/arm_joint_5/current/i" type="int" value="60000"/>
      
-        <param name="gain/arm_joint_5/current/d" type="int" value="1"/>
-        <param name="gain/arm_joint_4/current/d" type="int" value="1"/>
-        <param name="gain/arm_joint_3/current/d" type="int" value="1"/>
-        <param name="gain/arm_joint_2/current/d" type="int" value="1"/>
-        <param name="gain/arm_joint_1/current/d" type="int" value="1"/>
+        <param name="gain/arm_joint_1/current/d" type="int" value="0"/>
+        <param name="gain/arm_joint_2/current/d" type="int" value="0"/>
+        <param name="gain/arm_joint_3/current/d" type="int" value="0"/>
+        <param name="gain/arm_joint_4/current/d" type="int" value="0"/>
+        <param name="gain/arm_joint_5/current/d" type="int" value="0"/>
 
-        <param name="gain/arm_joint_5/current/i_Clip" type="int" value="100"/>
-        <param name="gain/arm_joint_4/current/i_Clip" type="int" value="100"/>
-        <param name="gain/arm_joint_3/current/i_Clip" type="int" value="100"/>
-        <param name="gain/arm_joint_2/current/i_Clip" type="int" value="100"/>
-        <param name="gain/arm_joint_1/current/i_Clip" type="int" value="100"/>
+        <param name="gain/arm_joint_1/current/i_Clip" type="int" value="950"/>
+        <param name="gain/arm_joint_2/current/i_Clip" type="int" value="950"/>
+        <param name="gain/arm_joint_3/current/i_Clip" type="int" value="950"/>
+        <param name="gain/arm_joint_4/current/i_Clip" type="int" value="950"/>
+        <param name="gain/arm_joint_5/current/i_Clip" type="int" value="950"/>
 
 
         <!-- Set PID_first_pos -->
-        <param name="gain/arm_joint_5/firstPos/p" type="int" value="201"/>
-        <param name="gain/arm_joint_4/firstPos/p" type="int" value="201"/>
-        <param name="gain/arm_joint_3/firstPos/p" type="int" value="201"/>
-        <param name="gain/arm_joint_2/firstPos/p" type="int" value="201"/>
-        <param name="gain/arm_joint_1/firstPos/p" type="int" value="201"/>
+        <param name="gain/arm_joint_1/firstPos/p" type="int" value="1000"/>
+        <param name="gain/arm_joint_2/firstPos/p" type="int" value="1000"/>
+        <param name="gain/arm_joint_3/firstPos/p" type="int" value="1000"/>
+        <param name="gain/arm_joint_4/firstPos/p" type="int" value="1000"/>
+        <param name="gain/arm_joint_5/firstPos/p" type="int" value="1000"/>
    
-        <param name="gain/arm_joint_5/firstPos/i" type="int" value="1"/>
-        <param name="gain/arm_joint_4/firstPos/i" type="int" value="1"/>
-        <param name="gain/arm_joint_3/firstPos/i" type="int" value="1"/>
-        <param name="gain/arm_joint_2/firstPos/i" type="int" value="1"/>
-        <param name="gain/arm_joint_1/firstPos/i" type="int" value="1"/>
+        <param name="gain/arm_joint_1/firstPos/i" type="int" value="0"/>
+        <param name="gain/arm_joint_2/firstPos/i" type="int" value="0"/>
+        <param name="gain/arm_joint_3/firstPos/i" type="int" value="0"/>
+        <param name="gain/arm_joint_4/firstPos/i" type="int" value="0"/>
+        <param name="gain/arm_joint_5/firstPos/i" type="int" value="0"/>
 
 
-        <param name="gain/arm_joint_5/firstPos/d" type="int" value="1"/>
-        <param name="gain/arm_joint_4/firstPos/d" type="int" value="1"/>
-        <param name="gain/arm_joint_3/firstPos/d" type="int" value="1"/>
-        <param name="gain/arm_joint_2/firstPos/d" type="int" value="1"/>
-        <param name="gain/arm_joint_1/firstPos/d" type="int" value="1"/>
+        <param name="gain/arm_joint_1/firstPos/d" type="int" value="0"/>
+        <param name="gain/arm_joint_2/firstPos/d" type="int" value="0"/>
+        <param name="gain/arm_joint_3/firstPos/d" type="int" value="0"/>
+        <param name="gain/arm_joint_4/firstPos/d" type="int" value="0"/>
+        <param name="gain/arm_joint_5/firstPos/d" type="int" value="0"/>
 
-        <param name="gain/arm_joint_5/firstPos/i_Clip" type="int" value="101"/>
-        <param name="gain/arm_joint_4/firstPos/i_Clip" type="int" value="101"/>
-        <param name="gain/arm_joint_3/firstPos/i_Clip" type="int" value="101"/>
-        <param name="gain/arm_joint_2/firstPos/i_Clip" type="int" value="101"/>
-        <param name="gain/arm_joint_1/firstPos/i_Clip" type="int" value="101"/>
+        <param name="gain/arm_joint_1/firstPos/i_Clip" type="int" value="500"/>
+        <param name="gain/arm_joint_2/firstPos/i_Clip" type="int" value="500"/>
+        <param name="gain/arm_joint_3/firstPos/i_Clip" type="int" value="500"/>
+        <param name="gain/arm_joint_4/firstPos/i_Clip" type="int" value="500"/>
+        <param name="gain/arm_joint_5/firstPos/i_Clip" type="int" value="500"/>
 
         Set PID_first_speed 
-        <param name="gain/arm_joint_5/firstSpeed/p" type="int" value="201"/>
-        <param name="gain/arm_joint_4/firstSpeed/p" type="int" value="201"/>
-        <param name="gain/arm_joint_3/firstSpeed/p" type="int" value="201"/>
-        <param name="gain/arm_joint_2/firstSpeed/p" type="int" value="201"/>
-        <param name="gain/arm_joint_1/firstSpeed/p" type="int" value="201"/>
+        <param name="gain/arm_joint_1/firstSpeed/p" type="int" value="300"/>
+        <param name="gain/arm_joint_2/firstSpeed/p" type="int" value="300"/>
+        <param name="gain/arm_joint_3/firstSpeed/p" type="int" value="300"/>
+        <param name="gain/arm_joint_4/firstSpeed/p" type="int" value="200"/>
+        <param name="gain/arm_joint_5/firstSpeed/p" type="int" value="120"/>
    
-        <param name="gain/arm_joint_5/firstSpeed/i" type="int" value="1"/>
-        <param name="gain/arm_joint_4/firstSpeed/i" type="int" value="1"/>
-        <param name="gain/arm_joint_3/firstSpeed/i" type="int" value="1"/>
-        <param name="gain/arm_joint_2/firstSpeed/i" type="int" value="1"/>
-        <param name="gain/arm_joint_1/firstSpeed/i" type="int" value="1"/>
+        <param name="gain/arm_joint_1/firstSpeed/i" type="int" value="600"/>
+        <param name="gain/arm_joint_2/firstSpeed/i" type="int" value="600"/>
+        <param name="gain/arm_joint_3/firstSpeed/i" type="int" value="600"/>
+        <param name="gain/arm_joint_4/firstSpeed/i" type="int" value="800"/>
+        <param name="gain/arm_joint_5/firstSpeed/i" type="int" value="100"/>
 
 
-        <param name="gain/arm_joint_5/firstSpeed/d" type="int" value="1"/>
-        <param name="gain/arm_joint_4/firstSpeed/d" type="int" value="1"/>
-        <param name="gain/arm_joint_3/firstSpeed/d" type="int" value="1"/>
-        <param name="gain/arm_joint_2/firstSpeed/d" type="int" value="1"/>
-        <param name="gain/arm_joint_1/firstSpeed/d" type="int" value="1"/>
+        <param name="gain/arm_joint_1/firstSpeed/d" type="int" value="0"/>
+        <param name="gain/arm_joint_2/firstSpeed/d" type="int" value="0"/>
+        <param name="gain/arm_joint_3/firstSpeed/d" type="int" value="0"/>
+        <param name="gain/arm_joint_4/firstSpeed/d" type="int" value="0"/>
+        <param name="gain/arm_joint_5/firstSpeed/d" type="int" value="0"/>
 
-        <param name="gain/arm_joint_5/firstSpeed/i_Clip" type="int" value="101"/>
-        <param name="gain/arm_joint_4/firstSpeed/i_Clip" type="int" value="101"/>
-        <param name="gain/arm_joint_3/firstSpeed/i_Clip" type="int" value="101"/>
-        <param name="gain/arm_joint_2/firstSpeed/i_Clip" type="int" value="101"/>
-        <param name="gain/arm_joint_1/firstSpeed/i_Clip" type="int" value="101"/>
+        <param name="gain/arm_joint_1/firstSpeed/i_Clip" type="int" value="500"/>
+        <param name="gain/arm_joint_2/firstSpeed/i_Clip" type="int" value="500"/>
+        <param name="gain/arm_joint_3/firstSpeed/i_Clip" type="int" value="500"/>
+        <param name="gain/arm_joint_4/firstSpeed/i_Clip" type="int" value="500"/>
+        <param name="gain/arm_joint_5/firstSpeed/i_Clip" type="int" value="500"/>
 
 	
 	<!-- Default name values --> 
