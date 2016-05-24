@@ -186,19 +186,11 @@ public:
     ros::Subscriber gripperPositionCommandSubscriber;
 
 
-    ros::Publisher armjoint1ParameterCommandPublisher;
-
-    ros::Publisher armjoint2ParameterCommandPublisher;
-
-    ros::Publisher armjoint3ParameterCommandPublisher;
    
-    ros::Publisher armjoint4ParameterCommandPublisher;
-
-    ros::Publisher armjoint5ParameterCommandPublisher;
 
 
 
-    ros::Publisher armPWMCommandPublisher;
+    ros::Publisher armPWMPublisher;
 
     ros::Publisher armCurrentPublisher;
 

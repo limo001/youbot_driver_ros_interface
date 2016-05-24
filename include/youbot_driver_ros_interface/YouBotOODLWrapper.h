@@ -66,7 +66,7 @@
 #include "brics_actuator/JointTorques.h"
 #include "youbot_driver_ros_interface/JointCurrents.h"
 #include "youbot_driver_ros_interface/JointPWMs.h"
-#include "brics_actuator/JointCurrents.h"
+
 
 /* OODL includes */
 #include "YouBotConfiguration.h"
@@ -148,7 +148,7 @@ public:
     void armPWMsCommandCallback(const brics_actuator::JointValueConstPtr& youbotArmCommand, int armIndex);
 
    
-   void armCurrentsCommandCallback(const brics_actuator::JointPositionsConstPtr& youbotArmCommand, int armIndex);
+   void armCurrentsCommandCallback(const youbot_driver_ros_interface::JointCurrentsConstPtr& youbotArmCommand, int armIndex);
 
 
 
@@ -373,9 +373,9 @@ private:
    
     vector<dynamic_reconfigure::Config> armConfigMessages;
    // vector<sensor_msgs::JointState> armConfigMessages;
-   vector<brics_actuator::JointPositions> armCurrentMessages;
+    vector<youbot_driver_ros_interface::JointCurrents> armCurrentMessages;
 
-    youbot_driver_ros_interface::JointCurrents  armJointCurrentMessages;
+    vector<youbot_driver_ros_interface::JointPWMs>  armJointPWMMessages;
      
 
     /// The joint trajectory goal that is currently active.

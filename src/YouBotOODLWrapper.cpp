@@ -196,12 +196,12 @@ void YouBotOODLWrapper::initializeArm(std::string armName, bool enableStandardGr
 
      topicName.str("");
     topicName << youBotConfiguration.youBotArmConfigurations[armIndex].commandTopicName << "arm_controller/current_command"; // e.g. arm_1/arm_controller/positionCommand
-    youBotConfiguration.youBotArmConfigurations[armIndex].armCurrentCommandSubscriber = node.subscribe<brics_actuator::JointPositions> (topicName.str(), 1000, boost::bind(&YouBotOODLWrapper::armCurrentsCommandCallback, this, _1, armIndex));
+    youBotConfiguration.youBotArmConfigurations[armIndex].armCurrentCommandSubscriber = node.subscribe<youbot_driver_ros_interface::JointCurrents> (topicName.str(), 1000, boost::bind(&YouBotOODLWrapper::armCurrentsCommandCallback, this, _1, armIndex));
 
 
     topicName.str("");
     topicName << youBotConfiguration.youBotArmConfigurations[armIndex].commandTopicName << "arm_controller/position_command"; // e.g. arm_1/arm_controller/positionCommand
-    youBotConfiguration.youBotArmConfigurations[armIndex].armPositionCommandSubscriber = node.subscribe<brics_actuator::JointPositions > (topicName.str(), 1000, boost::bind(&YouBotOODLWrapper::armPositionsCommandCallback, this, _1, armIndex));
+    youBotConfiguration.youBotArmConfigurations[armIndex].armPositionCommandSubscriber = node.subscribe<brics_actuator::JointPositions> (topicName.str(), 1000, boost::bind(&YouBotOODLWrapper::armPositionsCommandCallback, this, _1, armIndex));
 
     topicName.str("");
     topicName << youBotConfiguration.youBotArmConfigurations[armIndex].commandTopicName << "arm_controller/velocity_command";
@@ -224,30 +224,14 @@ void YouBotOODLWrapper::initializeArm(std::string armName, bool enableStandardGr
     topicName << youBotConfiguration.youBotArmConfigurations[armIndex].commandTopicName << "joint_states";
     youBotConfiguration.youBotArmConfigurations[armIndex].armJointStatePublisher = node.advertise<sensor_msgs::JointState > (topicName.str(), 1); //TODO different names or one topic?
 
-    /*topicName.str("");
-    topicName <<youBotConfiguration.youBotArmConfigurations[armIndex].commandTopicName << "arm_controller/gains/arm_joint_1/parameter_updates";
-    youBotConfiguration.youBotArmConfigurations[armIndex].armjoint1ParameterCommandPublisher = node.advertise<dynamic_reconfigure::Config> (topicName.str(), 1);*/
+    
+    topicName.str("");
+    topicName <<"joint_current";
+    youBotConfiguration.youBotArmConfigurations[armIndex].armCurrentPublisher = node.advertise<youbot_driver_ros_interface::JointCurrents> (topicName.str(), 1);
 
     topicName.str("");
-    topicName <<youBotConfiguration.youBotArmConfigurations[armIndex].commandTopicName << "arm_controller/current_command/updates";
-    youBotConfiguration.youBotArmConfigurations[armIndex].armCurrentPublisher = node.advertise<brics_actuator::JointPositions> (topicName.str(), 1);
-
-   
-    /*topicName.str("");
-    topicName <<youBotConfiguration.youBotArmConfigurations[armIndex].commandTopicName << "arm_controller/gains/arm_joint_2/parameter_updates";
-    youBotConfiguration.youBotArmConfigurations[armIndex].armjoint2ParemterCommandPublisher = node.advertise<dynamic_reconfigure::Config > (topicName.str(), 1);
-
-    topicName.str("");
-    topicName <<youBotConfiguration.youBotArmConfigurations[armIndex].commandTopicName << "arm_controller/gains/arm_joint_3/parameter_updates";
-    youBotConfiguration.youBotArmConfigurations[armIndex].armjoint3ParemterCommandPublisher = node.advertise<dynamic_reconfigure::Config > (topicName.str(), 1);
-
-    topicName.str("");
-    topicName <<youBotConfiguration.youBotArmConfigurations[armIndex].commandTopicName << "arm_controller/gains/arm_joint_4/parameter_updates";
-    youBotConfiguration.youBotArmConfigurations[armIndex].armjoint4ParemterCommandPublisher = node.advertise<dynamic_reconfigure::Config > (topicName.str(), 1);
-
-    topicName.str("");
-    topicName <<youBotConfiguration.youBotArmConfigurations[armIndex].commandTopicName << "arm_controller/gains/arm_joint_5/parameter_updates";
-    youBotConfiguration.youBotArmConfigurations[armIndex].armjoint5ParemterCommandPublisher = node.advertise<dynamic_reconfigure::Config > (topicName.str(), 1);*/
+    topicName <<"joint_pwm";
+    youBotConfiguration.youBotArmConfigurations[armIndex].armPWMPublisher = node.advertise<youbot_driver_ros_interface::JointPWMs> (topicName.str(), 1);
 
    
 
@@ -312,8 +296,11 @@ void YouBotOODLWrapper::initializeArm(std::string armName, bool enableStandardGr
     dynamic_reconfigure::Config  dummyConfigMessage;
     armConfigMessages.push_back(dummyConfigMessage);
 
-    brics_actuator::JointPositions  dummyCurrentMessage;
+    youbot_driver_ros_interface::JointCurrents  dummyCurrentMessage;
     armCurrentMessages.push_back(dummyCurrentMessage);
+
+   // youbot_driver_ros_interface::JointPWMs dummyPWMMessage;
+    //armPWMMessages.push_back(dummyPWMMessage);
 
      /* setup frame_ids */
     youBotArmFrameID = "arm"; //TODO find default topic name
@@ -371,9 +358,11 @@ void YouBotOODLWrapper::stop()
             youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm = 0;
         }
         
-        youBotConfiguration.youBotArmConfigurations[armIndex].armjoint1ParameterCommandPublisher.shutdown();
+        
         youBotConfiguration.youBotArmConfigurations[armIndex].armJointStatePublisher.shutdown();
         youBotConfiguration.youBotArmConfigurations[armIndex].armCurrentPublisher.shutdown();
+        youBotConfiguration.youBotArmConfigurations[armIndex].armPWMPublisher.shutdown();
+
         youBotConfiguration.youBotArmConfigurations[armIndex].armPositionCommandSubscriber.shutdown();
         youBotConfiguration.youBotArmConfigurations[armIndex].armVelocityCommandSubscriber.shutdown();
         youBotConfiguration.youBotArmConfigurations[armIndex].armTorquesCommandSubscriber.shutdown();
@@ -394,6 +383,7 @@ void YouBotOODLWrapper::stop()
 
     armConfigMessages.clear();
     armCurrentMessages.clear();
+   // armPWMMessages.clear();
 
 
     youbot::EthercatMaster::destroy();
@@ -645,7 +635,7 @@ void YouBotOODLWrapper::armTorquesCommandCallback(const brics_actuator::JointTor
       }
 }
 
-void YouBotOODLWrapper::armCurrentsCommandCallback(const brics_actuator::JointPositionsConstPtr& youbotArmCommand, int armIndex)
+void YouBotOODLWrapper::armCurrentsCommandCallback(const youbot_driver_ros_interface::JointCurrentsConstPtr& youbotArmCommand, int armIndex)
 {
     ROS_DEBUG("Command for arm%i received", armIndex + 1);
     ROS_ASSERT(0 <= armIndex && armIndex < static_cast<int> (youBotConfiguration.youBotArmConfigurations.size()));
@@ -654,7 +644,7 @@ void YouBotOODLWrapper::armCurrentsCommandCallback(const brics_actuator::JointPo
     {
 
         ROS_DEBUG("Arm ID is: %s", youBotConfiguration.youBotArmConfigurations[armIndex].armID.c_str());
-        if (youbotArmCommand->positions.size() < 1)
+        if (youbotArmCommand->currents.size() < 1)
         {
             ROS_WARN("youBot driver received an invalid joint positions command.");
             return;
@@ -664,15 +654,15 @@ void YouBotOODLWrapper::armCurrentsCommandCallback(const brics_actuator::JointPo
 
         /* populate mapping between joint names and values  */
         std::map<string, double> jointNameToValueMapping;
-        for (int i = 0; i < static_cast<int> (youbotArmCommand->positions.size()); ++i)
+        for (int i = 0; i < static_cast<int> (youbotArmCommand->currents.size()); ++i)
         {
-            if (unit == youbotArmCommand->positions[i].unit)
+            if (unit == youbotArmCommand->currents[i].unit)
             {
-                jointNameToValueMapping.insert(make_pair(youbotArmCommand->positions[i].joint_uri, youbotArmCommand->positions[i].value));
+                jointNameToValueMapping.insert(make_pair(youbotArmCommand->currents[i].joint_uri, youbotArmCommand->currents[i].value));
             }
             else
             {
-                ROS_WARN("Unit incompatibility. Are you sure you want to command %s instead of %s ?", youbotArmCommand->positions[i].unit.c_str(), unit.c_str());
+                ROS_WARN("Unit incompatibility. Are you sure you want to command %s instead of %s ?", youbotArmCommand->currents[i].unit.c_str(), unit.c_str());
             }
         }
 
@@ -1187,7 +1177,7 @@ void YouBotOODLWrapper::computeOODLSensorReadings()
             armJointStateMessages[armIndex].effort.resize(youBotArmDoF + youBotNumberOfFingers);
          
             //armCurrentMessages[armIndex].poisonStamp.resize(youBotArmDoF);
-            armCurrentMessages[armIndex].positions.resize(youBotArmDoF);
+            armCurrentMessages[armIndex].currents.resize(youBotArmDoF);
             
 
             ROS_ASSERT(youBotConfiguration.youBotArmConfigurations[armIndex].jointNames.size() == static_cast<unsigned int> (youBotArmDoF));
@@ -1205,9 +1195,10 @@ void YouBotOODLWrapper::computeOODLSensorReadings()
                 armJointStateMessages[armIndex].velocity[i] = currentVelocity.angularVelocity.value();
                 armJointStateMessages[armIndex].effort[i] = currentTorque.torque.value();
 
-                armCurrentMessages[armIndex].positions[i].timeStamp = currentTime;
-                armCurrentMessages[armIndex].positions[i].joint_uri = youBotConfiguration.youBotArmConfigurations[armIndex].jointNames[i];
-                armCurrentMessages[armIndex].positions[i].value = currentJointCurrent.current.value(); 
+               // armCurrentMessages[armIndex].currents[i].timeStamp = currentTime;
+                armCurrentMessages[armIndex].currents[i].joint_uri = youBotConfiguration.youBotArmConfigurations[armIndex].jointNames[i];
+                armCurrentMessages[armIndex].currents[i].value = currentJointCurrent.current.value();
+                armCurrentMessages[armIndex].currents[i].unit = boost::units::to_string(boost::units::si::ampere);
               
             }
                 //currents = armCurrentMessages[armIndex].positions;
@@ -1583,55 +1574,109 @@ bool YouBotOODLWrapper::ParametersControlCallback(std_srvs::Empty::Request& requ
                        //PID_pos_sec
                         PParameterSecondParametersPositionControl_Parameter[i].setParameter(PParameterSecondParametersPositionControl_actual[i]);
                         youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).setConfigurationParameter(PParameterSecondParametersPositionControl_Parameter[i]);
+                        youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).storeConfigurationParameterPermanent(PParameterSecondParametersPositionControl_Parameter[i]);
+
+
                         IParameterSecondParametersPositionControl_Parameter[i].setParameter(IParameterSecondParametersPositionControl_actual[i]); 
                         youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).setConfigurationParameter(IParameterSecondParametersPositionControl_Parameter[i]);
+                        youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).storeConfigurationParameterPermanent(IParameterSecondParametersPositionControl_Parameter[i]);
+
+
                         DParameterSecondParametersPositionControl_Parameter[i].setParameter(DParameterSecondParametersPositionControl_actual[i]);
                         youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).setConfigurationParameter(DParameterSecondParametersPositionControl_Parameter[i]);
+                        youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).storeConfigurationParameterPermanent(DParameterSecondParametersPositionControl_Parameter[i]);
+
+
                         IClippingParameterSecondParametersPositionControl_Parameter[i].setParameter(IClippingParameterSecondParametersPositionControl_actual[i]);
 			youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).setConfigurationParameter(IClippingParameterSecondParametersPositionControl_Parameter[i]);
+                        youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).storeConfigurationParameterPermanent(IClippingParameterSecondParametersPositionControl_Parameter[i]);
 			
                         //PID_speed_sec
                         PParameterSecondParametersSpeedControl_Parameter[i].setParameter(PParameterSecondParametersSpeedControl_actual[i]);
                         youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).setConfigurationParameter(PParameterSecondParametersSpeedControl_Parameter[i]);
+                        youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).storeConfigurationParameterPermanent(PParameterSecondParametersSpeedControl_Parameter[i]);
+
                         IParameterSecondParametersSpeedControl_Parameter[i].setParameter(IParameterSecondParametersSpeedControl_actual[i]); 
                         youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).setConfigurationParameter(IParameterSecondParametersSpeedControl_Parameter[i]);
+                        youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).storeConfigurationParameterPermanent(IParameterSecondParametersSpeedControl_Parameter[i]);
+
+
                         DParameterSecondParametersSpeedControl_Parameter[i].setParameter(DParameterSecondParametersSpeedControl_actual[i]);
                         youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).setConfigurationParameter(DParameterSecondParametersSpeedControl_Parameter[i]);
+                        youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).storeConfigurationParameterPermanent(DParameterSecondParametersSpeedControl_Parameter[i]);
+
+
                         IClippingParameterSecondParametersSpeedControl_Parameter[i].setParameter(IClippingParameterSecondParametersSpeedControl_actual[i]);
                         youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).setConfigurationParameter(IClippingParameterSecondParametersSpeedControl_Parameter[i]);
+                        youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).storeConfigurationParameterPermanent(IClippingParameterSecondParametersSpeedControl_Parameter[i]);
+
 			
                       // PID Current
                          PParameterCurrentControl_Parameter[i].setParameter(PParameterCurrentControl_actual[i]);
                         youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).setConfigurationParameter(PParameterCurrentControl_Parameter[i]);
+                        youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).storeConfigurationParameterPermanent(PParameterCurrentControl_Parameter[i]);
+
+
                         IParameterCurrentControl_Parameter[i].setParameter(IParameterCurrentControl_actual[i]);
                         youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).setConfigurationParameter(IParameterCurrentControl_Parameter[i]);
+                        youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).storeConfigurationParameterPermanent(IParameterCurrentControl_Parameter[i]);
+
+
                         DParameterCurrentControl_Parameter[i].setParameter(DParameterCurrentControl_actual[i]);
                         youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).setConfigurationParameter(DParameterCurrentControl_Parameter[i]);
+                        youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).storeConfigurationParameterPermanent(DParameterCurrentControl_Parameter[i]);
+
+
+
                         IClippingParameterCurrentControl_Parameter[i].setParameter(IClippingParameterCurrentControl_actual[i]);
                         youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).setConfigurationParameter(IClippingParameterCurrentControl_Parameter[i]);	
+                        youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).storeConfigurationParameterPermanent(IClippingParameterCurrentControl_Parameter[i]);
+
 
                       // PID First  pos
 
                         PParameterFirstParametersPositionControl_Parameter[i].setParameter(PParameterFirstParametersPositionControl_actual[i]);
                         youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).setConfigurationParameter(PParameterFirstParametersPositionControl_Parameter[i]);
+                        youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).storeConfigurationParameterPermanent(PParameterFirstParametersPositionControl_Parameter[i]);
+
+
                         IParameterFirstParametersPositionControl_Parameter[i].setParameter(IParameterFirstParametersPositionControl_actual[i]);
                         youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).setConfigurationParameter(IParameterFirstParametersPositionControl_Parameter[i]);
+                        youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).storeConfigurationParameterPermanent(IParameterFirstParametersPositionControl_Parameter[i]);
+
+
                         DParameterFirstParametersPositionControl_Parameter[i].setParameter(DParameterFirstParametersPositionControl_actual[i]);
                         youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).setConfigurationParameter(DParameterFirstParametersPositionControl_Parameter[i]);
+                        youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).storeConfigurationParameterPermanent(DParameterFirstParametersPositionControl_Parameter[i]);
+
+
+
                         IClippingParameterFirstParametersPositionControl_Parameter[i].setParameter(IClippingParameterFirstParametersPositionControl_actual[i]);
                         youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).setConfigurationParameter(IClippingParameterFirstParametersPositionControl_Parameter[i]);
+                        youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).storeConfigurationParameterPermanent(IClippingParameterFirstParametersPositionControl_Parameter[i]);
+
                    
                       // PID First  speed
 
                         PParameterFirstParametersSpeedControl_Parameter[i].setParameter(PParameterFirstParametersSpeedControl_actual[i]);
                         youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).setConfigurationParameter(PParameterFirstParametersSpeedControl_Parameter[i]);
+                        youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).storeConfigurationParameterPermanent(PParameterFirstParametersSpeedControl_Parameter[i]);
+
+
                         IParameterFirstParametersSpeedControl_Parameter[i].setParameter(IParameterFirstParametersSpeedControl_actual[i]);
                         youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).setConfigurationParameter(IParameterFirstParametersSpeedControl_Parameter[i]);
+                        youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).storeConfigurationParameterPermanent(IParameterFirstParametersSpeedControl_Parameter[i]);
+
+
                         DParameterFirstParametersSpeedControl_Parameter[i].setParameter(DParameterFirstParametersSpeedControl_actual[i]);
                         youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).setConfigurationParameter(DParameterFirstParametersSpeedControl_Parameter[i]);
+                        youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).storeConfigurationParameterPermanent(DParameterFirstParametersSpeedControl_Parameter[i]);
+
+
                         IClippingParameterFirstParametersSpeedControl_Parameter[i].setParameter(IClippingParameterFirstParametersSpeedControl_actual[i]);
                         youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).setConfigurationParameter(IClippingParameterFirstParametersSpeedControl_Parameter[i]);
-			
+			youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->getArmJoint(i+1).storeConfigurationParameterPermanent(IClippingParameterFirstParametersSpeedControl_Parameter[i]);
+
                      }
 
 

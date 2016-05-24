@@ -164,9 +164,7 @@ public:
     const static unsigned int LEFT_FINGER_INDEX = 0;
     const static unsigned int RIGHT_FINGER_INDEX = 1;
 
-   ///////////////////////////////////////////////////////
-   ////////     Subscriber              //////////////////
-   //////////////////////////////////////////////////////
+
     ros::Subscriber armPWMCommandSubscriber;
 
     ros::Subscriber armCurrentCommandSubscriber;
@@ -188,13 +186,6 @@ public:
     ros::Subscriber gripperPositionCommandSubscriber;
 
 
-
-  ////////////////////////////////////////////////////
-  /////   Publisher                 //////////////////
-  ////////////////////////////////////////////////////
-
-   
-    //
     ros::Publisher armjoint1ParameterCommandPublisher;
 
     ros::Publisher armjoint2ParameterCommandPublisher;
