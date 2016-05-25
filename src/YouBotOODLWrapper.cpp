@@ -224,7 +224,27 @@ void YouBotOODLWrapper::initializeArm(std::string armName, bool enableStandardGr
     topicName << youBotConfiguration.youBotArmConfigurations[armIndex].commandTopicName << "joint_states";
     youBotConfiguration.youBotArmConfigurations[armIndex].armJointStatePublisher = node.advertise<sensor_msgs::JointState > (topicName.str(), 1); //TODO different names or one topic?
 
+<<<<<<< HEAD
     
+=======
+    /*topicName.str("");
+    topicName <<youBotConfiguration.youBotArmConfigurations[armIndex].commandTopicName << "arm_controller/gains/arm_joint_1/parameter_updates";
+    youBotConfiguration.youBotArmConfigurations[armIndex].armjoint1ParameterCommandPublisher = node.advertise<dynamic_reconfigure::Config> (topicName.str(), 1);*/
+
+    topicName.str("");
+    topicName <<"joint_current";
+    youBotConfiguration.youBotArmConfigurations[armIndex].armCurrentPublisher = node.advertise<brics_actuator::JointPositions> (topicName.str(), 1);
+
+   
+    /*topicName.str("");
+    topicName <<youBotConfiguration.youBotArmConfigurations[armIndex].commandTopicName << "arm_controller/gains/arm_joint_2/parameter_updates";
+    youBotConfiguration.youBotArmConfigurations[armIndex].armjoint2ParemterCommandPublisher = node.advertise<dynamic_reconfigure::Config > (topicName.str(), 1);
+
+    topicName.str("");
+    topicName <<youBotConfiguration.youBotArmConfigurations[armIndex].commandTopicName << "arm_controller/gains/arm_joint_3/parameter_updates";
+    youBotConfiguration.youBotArmConfigurations[armIndex].armjoint3ParemterCommandPublisher = node.advertise<dynamic_reconfigure::Config > (topicName.str(), 1);
+
+>>>>>>> c702982462002c5cca25248b1891e90ef0f0ce88
     topicName.str("");
     topicName <<"joint_current";
     youBotConfiguration.youBotArmConfigurations[armIndex].armCurrentPublisher = node.advertise<youbot_driver_ros_interface::JointCurrents> (topicName.str(), 1);
