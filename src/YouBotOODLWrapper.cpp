@@ -231,7 +231,7 @@ void YouBotOODLWrapper::initializeArm(std::string armName, bool enableStandardGr
 
     topicName.str("");
     topicName <<"joint_current";
-    youBotConfiguration.youBotArmConfigurations[armIndex].armCurrentPublisher = node.advertise<brics_actuator::JointPositions> (topicName.str(), 1);
+    youBotConfiguration.youBotArmConfigurations[armIndex].armCurrentPublisher = node.advertise<youbot_driver_ros_interface::JointCurrents> (topicName.str(), 1);
 
    
     /*topicName.str("");
