@@ -148,7 +148,7 @@ public:
     void armPWMsCommandCallback(const brics_actuator::JointValueConstPtr& youbotArmCommand, int armIndex);
 
    
-   void armCurrentsCommandCallback(const youbot_driver_ros_interface::JointCurrentsConstPtr& youbotArmCommand, int armIndex);
+   void armCurrentsCommandCallback(const brics_actuator::JointPositionsConstPtr& youbotArmCommand, int armIndex);
 
 
 

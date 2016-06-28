@@ -1,7 +1,7 @@
 /******************************************************************************
  * Copyright (c) 2011
  * Locomotec
- *
+ *f
  * Author:
  * Sebastian Blumenthal
  *
@@ -172,7 +172,7 @@ void YouBotOODLWrapper::initializeArm(std::string armName, bool enableStandardGr
             youBotConfiguration.youBotArmConfigurations[armIndex].gripperFingerNames[YouBotArmConfiguration::RIGHT_FINGER_INDEX] = gripperBarName;
             ROS_INFO("Joint %i for gripper of arm %s has name: %s", 2, youBotConfiguration.youBotArmConfigurations[armIndex].armID.c_str(), gripperBarName.c_str());
 
-            // youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->calibrateGripper();
+            youBotConfiguration.youBotArmConfigurations[armIndex].youBotArm->calibrateGripper();
         }
     }
     catch (std::exception& e)
@@ -196,7 +196,7 @@ void YouBotOODLWrapper::initializeArm(std::string armName, bool enableStandardGr
 
      topicName.str("");
     topicName << youBotConfiguration.youBotArmConfigurations[armIndex].commandTopicName << "arm_controller/current_command"; // e.g. arm_1/arm_controller/positionCommand
-    youBotConfiguration.youBotArmConfigurations[armIndex].armCurrentCommandSubscriber = node.subscribe<youbot_driver_ros_interface::JointCurrents> (topicName.str(), 1000, boost::bind(&YouBotOODLWrapper::armCurrentsCommandCallback, this, _1, armIndex));
+    youBotConfiguration.youBotArmConfigurations[armIndex].armCurrentCommandSubscriber = node.subscribe<brics_actuator::JointPositions> (topicName.str(), 1000, boost::bind(&YouBotOODLWrapper::armCurrentsCommandCallback, this, _1, armIndex));
 
 
     topicName.str("");
@@ -234,23 +234,7 @@ void YouBotOODLWrapper::initializeArm(std::string armName, bool enableStandardGr
     youBotConfiguration.youBotArmConfigurations[armIndex].armCurrentPublisher = node.advertise<youbot_driver_ros_interface::JointCurrents> (topicName.str(), 1);
 
    
-    /*topicName.str("");
-    topicName <<youBotConfiguration.youBotArmConfigurations[armIndex].commandTopicName << "arm_controller/gains/arm_joint_2/parameter_updates";
-    youBotConfiguration.youBotArmConfigurations[armIndex].armjoint2ParemterCommandPublisher = node.advertise<dynamic_reconfigure::Config > (topicName.str(), 1);
-
-    topicName.str("");
-    topicName <<youBotConfiguration.youBotArmConfigurations[armIndex].commandTopicName << "arm_controller/gains/arm_joint_3/parameter_updates";
-    youBotConfiguration.youBotArmConfigurations[armIndex].armjoint3ParemterCommandPublisher = node.advertise<dynamic_reconfigure::Config > (topicName.str(), 1);
-
->>>>>>> c702982462002c5cca25248b1891e90ef0f0ce88
-    topicName.str("");
-    topicName <<"joint_current";
-    youBotConfiguration.youBotArmConfigurations[armIndex].armCurrentPublisher = node.advertise<youbot_driver_ros_interface::JointCurrents> (topicName.str(), 1);
-
-    topicName.str("");
-    topicName <<"joint_pwm";
-    youBotConfiguration.youBotArmConfigurations[armIndex].armPWMPublisher = node.advertise<youbot_driver_ros_interface::JointPWMs> (topicName.str(), 1);
-
+ 
    
 
     if (enableStandardGripper)
@@ -653,7 +637,7 @@ void YouBotOODLWrapper::armTorquesCommandCallback(const brics_actuator::JointTor
       }
 }
 
-void YouBotOODLWrapper::armCurrentsCommandCallback(const youbot_driver_ros_interface::JointCurrentsConstPtr& youbotArmCommand, int armIndex)
+void YouBotOODLWrapper::armCurrentsCommandCallback(const brics_actuator::JointPositionsConstPtr& youbotArmCommand, int armIndex)
 {
     ROS_DEBUG("Command for arm%i received", armIndex + 1);
     ROS_ASSERT(0 <= armIndex && armIndex < static_cast<int> (youBotConfiguration.youBotArmConfigurations.size()));
@@ -662,7 +646,7 @@ void YouBotOODLWrapper::armCurrentsCommandCallback(const youbot_driver_ros_inter
     {
 
         ROS_DEBUG("Arm ID is: %s", youBotConfiguration.youBotArmConfigurations[armIndex].armID.c_str());
-        if (youbotArmCommand->currents.size() < 1)
+        if (youbotArmCommand->positions.size() < 1)
         {
             ROS_WARN("youBot driver received an invalid joint positions command.");
             return;
@@ -672,15 +656,15 @@ void YouBotOODLWrapper::armCurrentsCommandCallback(const youbot_driver_ros_inter
 
         /* populate mapping between joint names and values  */
         std::map<string, double> jointNameToValueMapping;
-        for (int i = 0; i < static_cast<int> (youbotArmCommand->currents.size()); ++i)
+        for (int i = 0; i < static_cast<int> (youbotArmCommand->positions.size()); ++i)
         {
-            if (unit == youbotArmCommand->currents[i].unit)
+            if (unit == youbotArmCommand->positions[i].unit)
             {
-                jointNameToValueMapping.insert(make_pair(youbotArmCommand->currents[i].joint_uri, youbotArmCommand->currents[i].value));
+                jointNameToValueMapping.insert(make_pair(youbotArmCommand->positions[i].joint_uri, youbotArmCommand->positions[i].value));
             }
             else
             {
-                ROS_WARN("Unit incompatibility. Are you sure you want to command %s instead of %s ?", youbotArmCommand->currents[i].unit.c_str(), unit.c_str());
+                ROS_WARN("Unit incompatibility. Are you sure you want to command %s instead of %s ?", youbotArmCommand->positions[i].unit.c_str(), unit.c_str());
             }
         }
 
